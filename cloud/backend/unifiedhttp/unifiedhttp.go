@@ -11,7 +11,7 @@ import (
 )
 
 func NewUnifiedHTTPServer(lc fx.Lifecycle) *http.Server {
-	srv := &http.Server{Addr: ":8080"}
+	srv := &http.Server{Addr: ":8000"}
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			ln, err := net.Listen("tcp", srv.Addr)

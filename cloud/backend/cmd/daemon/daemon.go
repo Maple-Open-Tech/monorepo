@@ -23,7 +23,7 @@ func DaemonCmd() *cobra.Command {
 
 func doRunDaemon() {
 	fx.New(
-		fx.Provide(unifiedhttp.NewGetHealthCheckHTTPHandler),
+		fx.Provide(unifiedhttp.NewUnifiedHTTPServer),
 		fx.Invoke(func(*http.Server) {}),
 	).Run()
 }

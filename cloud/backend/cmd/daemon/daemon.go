@@ -6,6 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
+	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/unifiedhttp"
 )
@@ -23,7 +25,15 @@ func DaemonCmd() *cobra.Command {
 
 func doRunDaemon() {
 	fx.New(
-		fx.Provide(unifiedhttp.NewUnifiedHTTPServer),
+		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
+			return &fxevent.ZapLogger{Logger: log}
+		}),
+		fx.Provide(
+			unifiedhttp.NewUnifiedHTTPServer,
+			unifiedhttp.NewServeMux,
+			unifiedhttp.NewEchoHandler,
+			zap.NewExample,
+		),
 		fx.Invoke(func(*http.Server) {}),
 	).Run()
 }

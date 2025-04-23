@@ -25,3 +25,7 @@ func (h *EchoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.log.Warn("Failed to handle request", zap.Error(err))
 	}
 }
+
+func (*EchoHandler) Pattern() string {
+	return "/echo"
+}

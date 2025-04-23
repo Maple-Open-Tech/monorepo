@@ -30,8 +30,14 @@ func doRunDaemon() {
 		}),
 		fx.Provide(
 			unifiedhttp.NewUnifiedHTTPServer,
-			unifiedhttp.NewServeMux,
-			unifiedhttp.NewEchoHandler,
+			fx.Annotate(
+				unifiedhttp.NewServeMux,
+				fx.ParamTags(`group:"routes"`),
+			),
+		),
+		fx.Provide(
+			unifiedhttp.AsRoute(unifiedhttp.NewEchoHandler),
+			unifiedhttp.AsRoute(unifiedhttp.NewGetHealthCheckHTTPHandler),
 			zap.NewExample,
 		),
 		fx.Invoke(func(*http.Server) {}),

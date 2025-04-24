@@ -13,26 +13,35 @@ import (
 
 	"go.mongodb.org/mongo-driver/mongo"
 
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/middleware"
 	sv_gateway "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/service/gateway"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
 type GatewayUserRegisterHTTPHandler struct {
-	logger   *zap.Logger
-	dbClient *mongo.Client
-	service  sv_gateway.GatewayUserRegisterService
+	logger     *zap.Logger
+	dbClient   *mongo.Client
+	service    sv_gateway.GatewayUserRegisterService
+	middleware middleware.Middleware
 }
 
 func NewGatewayUserRegisterHTTPHandler(
 	logger *zap.Logger,
 	dbClient *mongo.Client,
 	service sv_gateway.GatewayUserRegisterService,
+	middleware middleware.Middleware,
 ) *GatewayUserRegisterHTTPHandler {
 	return &GatewayUserRegisterHTTPHandler{
-		logger:   logger,
-		dbClient: dbClient,
-		service:  service,
+		logger:     logger,
+		dbClient:   dbClient,
+		service:    service,
+		middleware: middleware,
 	}
+}
+
+func (r *GatewayUserRegisterHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// Apply MaplesSend middleware before handling the request
+	r.middleware.Attach(r.Execute)(w, req)
 }
 
 func (h *GatewayUserRegisterHTTPHandler) unmarshalRegisterCustomerRequest(
@@ -88,7 +97,7 @@ func (h *GatewayUserRegisterHTTPHandler) Execute(w http.ResponseWriter, r *http.
 	defer session.EndSession(ctx)
 
 	// Define a transaction function with a series of operations
-	transactionFunc := func(sessCtx mongo.SessionContext) (interface{}, error) {
+	transactionFunc := func(sessCtx mongo.SessionContext) (any, error) {
 		resp, err := h.service.Execute(sessCtx, data)
 		if err != nil {
 			return nil, err

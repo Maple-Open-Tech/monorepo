@@ -13,12 +13,12 @@ import (
 
 func Module() fx.Option {
 	return fx.Options(
+		repo.Module(),
+		usecase.Module(),
+		service.Module(),
 		fx.Provide(
-			repo.Module(),
-			usecase.Module(),
-			service.Module(),
 			unifiedhttp.AsRoute(commonhttp.NewGetMapleSendVersionHTTPHandler),
-			http.Module(),
 		),
+		http.Module(),
 	)
 }

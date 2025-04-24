@@ -15,8 +15,8 @@ import (
 func Module() fx.Option {
 	return fx.Options(
 		fx.Provide(
-			distributedmutex.NewAdapter,
 			blacklist.NewProvider,
+			distributedmutex.NewAdapter,
 			ipcountryblocker.NewProvider,
 			jwt.NewProvider,
 			password.NewProvider,

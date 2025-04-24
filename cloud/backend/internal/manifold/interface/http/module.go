@@ -2,8 +2,6 @@
 package http
 
 import (
-	"net/http"
-
 	"go.uber.org/fx"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/manifold/interface/http/middleware"
@@ -24,6 +22,5 @@ func Module() fx.Option {
 			AsRoute(NewGetHealthCheckHTTPHandler),
 			// Add other routes here
 		),
-		fx.Invoke(func(*http.Server) {}),
 	)
 }

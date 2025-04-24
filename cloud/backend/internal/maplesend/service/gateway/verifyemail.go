@@ -5,7 +5,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
 	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/domain/user"

@@ -13,8 +13,8 @@ import (
 func Module() fx.Option {
 	return fx.Options(
 		pkg.Module(),
-		maplesend.Module(),
 		commonhttp.Module(),
+		maplesend.Module(),
 		fx.Invoke(func(*http.Server) {}),
 	)
 }

@@ -7,7 +7,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	uc_emailer "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/usecase/emailer"
 	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/usecase/user"

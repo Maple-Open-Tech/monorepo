@@ -9,7 +9,7 @@ import (
 	dom_banip "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/domain/bannedipaddress"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 func (impl bannedIPAddressImpl) GetByID(ctx context.Context, id primitive.ObjectID) (*dom_banip.BannedIPAddress, error) {

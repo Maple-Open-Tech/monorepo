@@ -19,6 +19,8 @@ func Module() fx.Option {
 		service.Module(),
 		fx.Provide(
 			middleware.NewMiddleware,
+		),
+		fx.Provide(
 			unifiedhttp.AsRoute(commonhttp.NewGetMapleSendVersionHTTPHandler),
 			unifiedhttp.AsRoute(gateway.NewGatewayUserRegisterHTTPHandler),
 		),

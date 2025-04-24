@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/domain/user"
 )

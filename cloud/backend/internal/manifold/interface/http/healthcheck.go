@@ -1,4 +1,4 @@
-package unifiedhttp
+package http
 
 import (
 	"encoding/json"

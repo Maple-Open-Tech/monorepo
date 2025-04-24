@@ -8,8 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend"
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/unifiedhttp"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/manifold"
 )
 
 func DaemonCmd() *cobra.Command {
@@ -30,7 +29,6 @@ func doRunDaemon() {
 		}),
 		fx.Provide(zap.NewExample),
 		fx.Provide(config.NewProvider),
-		maplesend.Module(),
-		unifiedhttp.Module(),
+		manifold.Module(),
 	).Run()
 }

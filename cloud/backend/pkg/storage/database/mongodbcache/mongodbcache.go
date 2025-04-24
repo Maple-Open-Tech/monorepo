@@ -7,7 +7,7 @@ import (
 
 	"github.com/faabiosr/cachego"
 	"github.com/faabiosr/cachego/mongo"
-	mongo_client "go.mongodb.org/mongo-driver/mongo"
+	mongo_client "go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type Cacher interface {

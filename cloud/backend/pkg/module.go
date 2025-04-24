@@ -21,7 +21,6 @@ func Module() fx.Option {
 			jwt.NewProvider,
 			password.NewProvider,
 			mongodb.NewProvider,
-			mongodb.NewProvider,
 			mongodbcache.NewProvider,
 		),
 	)

@@ -8,6 +8,8 @@ import (
 	"github.com/faabiosr/cachego/mongo"
 	mongo_client "go.mongodb.org/mongo-driver/v2/mongo"
 	"go.uber.org/zap"
+
+	c "github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 )
 
 type Cacher interface {
@@ -24,7 +26,7 @@ type cacheImpl struct {
 	Logger *zap.Logger
 }
 
-func NewProvider(
+func NewProviderWithCustomConfig(
 	config CacheConfigurationProvider,
 	logger *zap.Logger,
 	dbClient *mongo_client.Client,
@@ -38,6 +40,24 @@ func NewProvider(
 	logger.Debug("cache initialized with mongodb as backend")
 	return &cacheImpl{
 		config: config,
+		Client: c,
+		Logger: logger,
+	}
+}
+
+func NewProvider(
+	appCfg *c.Configuration, //TODO: REPAIR!
+	logger *zap.Logger,
+	dbClient *mongo_client.Client,
+) Cacher {
+	logger.Debug("cache initializing...")
+
+	cc := dbClient.Database(appCfg.DB.MapleSendName).Collection("caches")
+
+	c := mongo.New(cc)
+
+	logger.Debug("cache initialized with mongodb as backend")
+	return &cacheImpl{
 		Client: c,
 		Logger: logger,
 	}

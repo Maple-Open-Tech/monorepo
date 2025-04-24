@@ -3,10 +3,10 @@ package inmemory
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"sync"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/storage"
+	"go.uber.org/zap"
 )
 
 type cacheValue struct {
@@ -22,7 +22,7 @@ type keyValueStorerImpl struct {
 }
 
 // NewInMemoryStorage creates a new instance of the keyValueStorerImpl.
-func NewInMemoryStorage(logger *slog.Logger) storage.Storage {
+func NewInMemoryStorage(logger *zap.Logger) storage.Storage {
 	return &keyValueStorerImpl{
 		data:   make(map[string]cacheValue),
 		txData: nil,

@@ -2,12 +2,12 @@
 package me
 
 import (
+	"context"
 	"errors"
 
 	"go.uber.org/zap"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
@@ -23,7 +23,7 @@ type DeleteMeRequestDTO struct {
 }
 
 type DeleteMeService interface {
-	Execute(sessCtx mongo.SessionContext, req *DeleteMeRequestDTO) error
+	Execute(sessCtx context.Context, req *DeleteMeRequestDTO) error
 }
 
 type deleteMeServiceImpl struct {
@@ -50,7 +50,7 @@ func NewDeleteMeService(
 	}
 }
 
-func (svc *deleteMeServiceImpl) Execute(sessCtx mongo.SessionContext, req *DeleteMeRequestDTO) error {
+func (svc *deleteMeServiceImpl) Execute(sessCtx context.Context, req *DeleteMeRequestDTO) error {
 	//
 	// STEP 1: Validation
 	//

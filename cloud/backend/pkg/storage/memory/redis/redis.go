@@ -6,9 +6,8 @@ import (
 	"log"
 	"time"
 
-	"log/slog"
-
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 
 	c "github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 )
@@ -26,15 +25,15 @@ type Cacher interface {
 
 type cache struct {
 	Client *redis.Client
-	Logger *slog.Logger
+	Logger *zap.Logger
 }
 
-func NewCache(cfg *c.Configuration, logger *slog.Logger) Cacher {
+func NewCache(cfg *c.Configuration, logger *zap.Logger) Cacher {
 	logger.Debug("cache initializing...")
 
 	opt, err := redis.ParseURL(cfg.Cache.URI)
 	if err != nil {
-		logger.Error("cache failed parsing url", slog.Any("err", err), slog.String("URI", cfg.Cache.URI))
+		logger.Error("cache failed parsing url", zap.Any("err", err), zap.String("URI", cfg.Cache.URI))
 		log.Fatal(err)
 	}
 	rdb := redis.NewClient(opt)
@@ -50,7 +49,7 @@ func NewCache(cfg *c.Configuration, logger *slog.Logger) Cacher {
 			break
 		}
 		if i == 2 {
-			logger.Error("cache failed connecting to Redis", slog.Any("err", err), slog.String("URI", cfg.Cache.URI))
+			logger.Error("cache failed connecting to Redis", zap.Any("err", err), zap.String("URI", cfg.Cache.URI))
 			log.Fatal(err)
 		}
 		time.Sleep(2 * time.Second)
@@ -90,7 +89,7 @@ func (s *cache) Get(ctx context.Context, key string) ([]byte, error) {
 		return nil, nil // Key does not exist
 	}
 	if err != nil {
-		s.Logger.Error("cache get failed", slog.Any("error", err))
+		s.Logger.Error("cache get failed", zap.Any("error", err))
 		return nil, err
 	}
 	return []byte(val), nil
@@ -99,7 +98,7 @@ func (s *cache) Get(ctx context.Context, key string) ([]byte, error) {
 func (s *cache) Set(ctx context.Context, key string, val []byte) error {
 	err := s.Client.Set(ctx, key, val, 0).Err()
 	if err != nil {
-		s.Logger.Error("cache set failed", slog.Any("error", err))
+		s.Logger.Error("cache set failed", zap.Any("error", err))
 		return err
 	}
 	return nil
@@ -108,7 +107,7 @@ func (s *cache) Set(ctx context.Context, key string, val []byte) error {
 func (s *cache) SetWithExpiry(ctx context.Context, key string, val []byte, expiry time.Duration) error {
 	err := s.Client.Set(ctx, key, val, expiry).Err()
 	if err != nil {
-		s.Logger.Error("cache set with expiry failed", slog.Any("error", err))
+		s.Logger.Error("cache set with expiry failed", zap.Any("error", err))
 		return err
 	}
 	return nil
@@ -117,7 +116,7 @@ func (s *cache) SetWithExpiry(ctx context.Context, key string, val []byte, expir
 func (s *cache) Delete(ctx context.Context, key string) error {
 	err := s.Client.Del(ctx, key).Err()
 	if err != nil {
-		s.Logger.Error("cache delete failed", slog.Any("error", err))
+		s.Logger.Error("cache delete failed", zap.Any("error", err))
 		return err
 	}
 	return nil
@@ -126,7 +125,7 @@ func (s *cache) Delete(ctx context.Context, key string) error {
 func (s *cache) Publish(ctx context.Context, channelName string, binary []byte) error {
 	err := s.Client.Publish(ctx, channelName, binary).Err()
 	if err != nil {
-		s.Logger.Error("cache failed publishing", slog.Any("error", err), slog.String("channel", channelName))
+		s.Logger.Error("cache failed publishing", zap.Any("error", err), zap.String("channel", channelName))
 		return err
 	}
 	return nil
@@ -147,13 +146,13 @@ func (s *cache) Subscribe(ctx context.Context, channelName string) RedisSubscrib
 
 type redisSubscriberImpl struct {
 	pubsub *redis.PubSub
-	logger *slog.Logger
+	logger *zap.Logger
 }
 
 func (s *redisSubscriberImpl) WaitUntilReceiveMessage(ctx context.Context) ([]byte, error) {
 	msg, err := s.pubsub.ReceiveMessage(ctx)
 	if err != nil {
-		s.logger.Error("failed to receive message", slog.Any("error", err))
+		s.logger.Error("failed to receive message", zap.Any("error", err))
 		return nil, err
 	}
 	return []byte(msg.Payload), nil

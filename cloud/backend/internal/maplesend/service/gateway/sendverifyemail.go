@@ -5,15 +5,13 @@ import (
 
 	"go.uber.org/zap"
 
-	"go.mongodb.org/mongo-driver/v2/mongo"
-
 	uc_emailer "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/usecase/emailer"
 	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/usecase/user"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
 type GatewaySendVerifyEmailService interface {
-	Execute(sessCtx mongo.SessionContext, req *GatewaySendVerifyEmailRequestIDO) error
+	Execute(sessCtx context.Context, req *GatewaySendVerifyEmailRequestIDO) error
 }
 
 type gatewaySendVerifyEmailServiceImpl struct {
@@ -34,7 +32,7 @@ type GatewaySendVerifyEmailRequestIDO struct {
 	Email string `json:"email"`
 }
 
-func (s *gatewaySendVerifyEmailServiceImpl) Execute(sessCtx mongo.SessionContext, req *GatewaySendVerifyEmailRequestIDO) error {
+func (s *gatewaySendVerifyEmailServiceImpl) Execute(sessCtx context.Context, req *GatewaySendVerifyEmailRequestIDO) error {
 	// Extract from our session the following data.
 	// sessionID := sessCtx.Value(constants.SessionID).(string)
 

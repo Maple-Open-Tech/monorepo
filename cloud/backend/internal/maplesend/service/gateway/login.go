@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"time"
@@ -8,7 +9,6 @@ import (
 	"go.uber.org/zap"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/domain/user"
 	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/usecase/user"
@@ -20,7 +20,7 @@ import (
 )
 
 type GatewayLoginService interface {
-	Execute(sessCtx mongo.SessionContext, req *GatewayLoginRequestIDO) (*GatewayLoginResponseIDO, error)
+	Execute(sessCtx context.Context, req *GatewayLoginRequestIDO) (*GatewayLoginResponseIDO, error)
 }
 
 type gatewayLoginServiceImpl struct {
@@ -56,7 +56,7 @@ type GatewayLoginResponseIDO struct {
 	RefreshTokenExpiryTime time.Time    `json:"refresh_token_expiry_time"`
 }
 
-func (s *gatewayLoginServiceImpl) Execute(sessCtx mongo.SessionContext, req *GatewayLoginRequestIDO) (*GatewayLoginResponseIDO, error) {
+func (s *gatewayLoginServiceImpl) Execute(sessCtx context.Context, req *GatewayLoginRequestIDO) (*GatewayLoginResponseIDO, error) {
 	//
 	// STEP 1: Sanization of input.
 	//
@@ -159,7 +159,7 @@ func (s *gatewayLoginServiceImpl) Execute(sessCtx mongo.SessionContext, req *Gat
 	return s.loginWithUser(sessCtx, u)
 }
 
-func (s *gatewayLoginServiceImpl) loginWithUser(sessCtx mongo.SessionContext, u *domain.User) (*GatewayLoginResponseIDO, error) {
+func (s *gatewayLoginServiceImpl) loginWithUser(sessCtx context.Context, u *domain.User) (*GatewayLoginResponseIDO, error) {
 	uBin, err := json.Marshal(u)
 	if err != nil {
 		s.logger.Error("marshalling error", zap.Any("err", err))

@@ -2,13 +2,13 @@
 package me
 
 import (
+	"context"
 	"errors"
 	"time"
 
 	"go.uber.org/zap"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
@@ -72,7 +72,7 @@ type VerifyProfileResponseDTO struct {
 }
 
 type VerifyProfileService interface {
-	Execute(sessCtx mongo.SessionContext, req *VerifyProfileRequestDTO) (*VerifyProfileResponseDTO, error)
+	Execute(sessCtx context.Context, req *VerifyProfileRequestDTO) (*VerifyProfileResponseDTO, error)
 }
 
 type verifyProfileServiceImpl struct {
@@ -97,7 +97,7 @@ func NewVerifyProfileService(
 }
 
 func (s *verifyProfileServiceImpl) Execute(
-	sessCtx mongo.SessionContext,
+	sessCtx context.Context,
 	req *VerifyProfileRequestDTO,
 ) (*VerifyProfileResponseDTO, error) {
 	//

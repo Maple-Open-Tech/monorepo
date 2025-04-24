@@ -83,7 +83,7 @@ func (h *GatewayRefreshTokenHTTPHandler) Execute(w http.ResponseWriter, r *http.
 	defer session.EndSession(ctx)
 
 	// Define a transaction function with a series of operations
-	transactionFunc := func(sessCtx mongo.SessionContext) (interface{}, error) {
+	transactionFunc := func(sessCtx context.Context) (interface{}, error) {
 		resp, err := h.service.Execute(sessCtx, data)
 		if err != nil {
 			return nil, err

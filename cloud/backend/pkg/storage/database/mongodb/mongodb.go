@@ -4,16 +4,15 @@ import (
 	"context"
 	"log"
 
-	"log/slog"
-
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
+	"go.uber.org/zap"
 
 	c "github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 )
 
-func NewProvider(appCfg *c.Configuration, logger *slog.Logger) *mongo.Client {
+func NewProvider(appCfg *c.Configuration, logger *zap.Logger) *mongo.Client {
 	logger.Debug("storage initializing...")
 
 	// DEVELOPERS NOTE:

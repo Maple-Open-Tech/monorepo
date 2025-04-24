@@ -2,6 +2,7 @@
 package me
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -9,7 +10,6 @@ import (
 	"go.uber.org/zap"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
@@ -81,7 +81,7 @@ type MeResponseDTO struct {
 }
 
 type GetMeService interface {
-	Execute(sessCtx mongo.SessionContext) (*MeResponseDTO, error)
+	Execute(sessCtx context.Context) (*MeResponseDTO, error)
 }
 
 type getMeServiceImpl struct {
@@ -108,7 +108,7 @@ func NewGetMeService(
 	}
 }
 
-func (svc *getMeServiceImpl) Execute(sessCtx mongo.SessionContext) (*MeResponseDTO, error) {
+func (svc *getMeServiceImpl) Execute(sessCtx context.Context) (*MeResponseDTO, error) {
 	//
 	// Get required from context.
 	//

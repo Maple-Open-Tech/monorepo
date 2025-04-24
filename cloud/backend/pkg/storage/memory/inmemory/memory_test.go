@@ -1,7 +1,6 @@
 package inmemory
 
 import (
-	"log/slog"
 	"reflect"
 	"testing"
 )
@@ -9,7 +8,7 @@ import (
 // TestNewInMemoryStorage verifies that the NewInMemoryStorage function
 // correctly initializes a new storage instance
 func TestNewInMemoryStorage(t *testing.T) {
-	logger := slog.Default()
+	logger := zap.Default()
 	storage := NewInMemoryStorage(logger)
 
 	if storage == nil {
@@ -25,7 +24,7 @@ func TestNewInMemoryStorage(t *testing.T) {
 
 // TestBasicOperations tests the basic Set/Get/Delete operations
 func TestBasicOperations(t *testing.T) {
-	storage := NewInMemoryStorage(slog.Default())
+	storage := NewInMemoryStorage(zap.Default())
 
 	// Test Set and Get
 	t.Run("Set and Get", func(t *testing.T) {
@@ -82,7 +81,7 @@ func TestBasicOperations(t *testing.T) {
 
 // TestIteration tests the Iterate functionality
 func TestIteration(t *testing.T) {
-	storage := NewInMemoryStorage(slog.Default())
+	storage := NewInMemoryStorage(zap.Default())
 
 	// Prepare test data
 	testData := map[string][]byte{
@@ -145,7 +144,7 @@ func TestIteration(t *testing.T) {
 
 // TestTransactions tests the transaction-related functionality
 func TestTransactions(t *testing.T) {
-	storage := NewInMemoryStorage(slog.Default())
+	storage := NewInMemoryStorage(zap.Default())
 
 	// Test basic transaction commit
 	t.Run("Transaction Commit", func(t *testing.T) {
@@ -266,7 +265,7 @@ func TestTransactions(t *testing.T) {
 
 // TestClose verifies the Close functionality
 func TestClose(t *testing.T) {
-	storage := NewInMemoryStorage(slog.Default())
+	storage := NewInMemoryStorage(zap.Default())
 
 	// Add some data
 	err := storage.Set("test", []byte("value"))

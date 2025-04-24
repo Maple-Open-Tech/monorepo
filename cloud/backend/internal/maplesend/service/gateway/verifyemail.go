@@ -1,11 +1,10 @@
 package gateway
 
 import (
+	"context"
 	"time"
 
 	"go.uber.org/zap"
-
-	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
 	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/domain/user"
@@ -14,7 +13,7 @@ import (
 )
 
 type GatewayVerifyEmailService interface {
-	Execute(sessCtx mongo.SessionContext, req *GatewayVerifyEmailRequestIDO) (*GatwayVerifyEmailResponseIDO, error)
+	Execute(sessCtx context.Context, req *GatewayVerifyEmailRequestIDO) (*GatwayVerifyEmailResponseIDO, error)
 }
 
 type gatewayVerifyEmailServiceImpl struct {
@@ -40,7 +39,7 @@ type GatwayVerifyEmailResponseIDO struct {
 	UserRole int8   `bson:"user_role" json:"user_role"`
 }
 
-func (s *gatewayVerifyEmailServiceImpl) Execute(sessCtx mongo.SessionContext, req *GatewayVerifyEmailRequestIDO) (*GatwayVerifyEmailResponseIDO, error) {
+func (s *gatewayVerifyEmailServiceImpl) Execute(sessCtx context.Context, req *GatewayVerifyEmailRequestIDO) (*GatwayVerifyEmailResponseIDO, error) {
 	// Extract from our session the following data.
 	// sessionID := sessCtx.Value(constants.SessionID).(string)
 

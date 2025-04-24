@@ -2,7 +2,6 @@ package distributedmutex
 
 import (
 	"context"
-	"log/slog"
 	"testing"
 	"time"
 
@@ -39,7 +38,7 @@ func (m *mockRedisClient) ScriptLoad(ctx context.Context, script string) *redis.
 }
 
 func TestNewAdapter(t *testing.T) {
-	adapter := NewAdapter(slog.Default(), &mockRedisClient{})
+	adapter := NewAdapter(zap.Default(), &mockRedisClient{})
 	if adapter == nil {
 		t.Fatal("expected non-nil adapter")
 	}
@@ -47,7 +46,7 @@ func TestNewAdapter(t *testing.T) {
 
 func TestAcquireAndRelease(t *testing.T) {
 	ctx := context.Background()
-	adapter := NewAdapter(slog.Default(), &mockRedisClient{})
+	adapter := NewAdapter(zap.Default(), &mockRedisClient{})
 
 	adapter.Acquire(ctx, "test-key")
 	adapter.Acquiref(ctx, "test-key-%d", 1)

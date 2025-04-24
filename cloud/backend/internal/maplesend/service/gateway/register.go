@@ -10,7 +10,6 @@ import (
 	"go.uber.org/zap"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
@@ -27,7 +26,7 @@ import (
 
 type GatewayUserRegisterService interface {
 	Execute(
-		sessCtx mongo.SessionContext,
+		sessCtx context.Context,
 		req *RegisterCustomerRequestIDO,
 	) (*RegisterCustomerResponseIDO, error)
 }
@@ -83,7 +82,7 @@ type RegisterCustomerResponseIDO struct {
 }
 
 func (s *gatewayUserRegisterServiceImpl) Execute(
-	sessCtx mongo.SessionContext,
+	sessCtx context.Context,
 	req *RegisterCustomerRequestIDO,
 ) (*RegisterCustomerResponseIDO, error) {
 	//
@@ -191,7 +190,7 @@ func (s *gatewayUserRegisterServiceImpl) Execute(
 	return s.registerWithUser(sessCtx, u)
 }
 
-func (s *gatewayUserRegisterServiceImpl) registerWithUser(sessCtx mongo.SessionContext, u *domain.User) (*RegisterCustomerResponseIDO, error) {
+func (s *gatewayUserRegisterServiceImpl) registerWithUser(sessCtx context.Context, u *domain.User) (*RegisterCustomerResponseIDO, error) {
 	uBin, err := json.Marshal(u)
 	if err != nil {
 		s.logger.Error("marshalling error", zap.Any("err", err))
@@ -228,7 +227,7 @@ func (s *gatewayUserRegisterServiceImpl) registerWithUser(sessCtx mongo.SessionC
 	}, nil
 }
 
-func (s *gatewayUserRegisterServiceImpl) createCustomerUserForRequest(sessCtx mongo.SessionContext, req *RegisterCustomerRequestIDO) (*domain.User, error) {
+func (s *gatewayUserRegisterServiceImpl) createCustomerUserForRequest(sessCtx context.Context, req *RegisterCustomerRequestIDO) (*domain.User, error) {
 
 	password, err := sstring.NewSecureString(req.Password)
 	if err != nil {

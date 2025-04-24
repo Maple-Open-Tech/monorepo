@@ -2,6 +2,7 @@
 package me
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -30,7 +31,7 @@ type UpdateMeRequestDTO struct {
 }
 
 type UpdateMeService interface {
-	Execute(sessCtx mongo.SessionContext, req *UpdateMeRequestDTO) (*MeResponseDTO, error)
+	Execute(sessCtx context.Context, req *UpdateMeRequestDTO) (*MeResponseDTO, error)
 }
 
 type updateMeServiceImpl struct {
@@ -57,7 +58,7 @@ func NewUpdateMeService(
 	}
 }
 
-func (svc *updateMeServiceImpl) Execute(sessCtx mongo.SessionContext, req *UpdateMeRequestDTO) (*MeResponseDTO, error) {
+func (svc *updateMeServiceImpl) Execute(sessCtx context.Context, req *UpdateMeRequestDTO) (*MeResponseDTO, error) {
 	//
 	// Get required from context.
 	//

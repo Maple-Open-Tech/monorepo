@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"time"
@@ -8,7 +9,6 @@ import (
 	"go.uber.org/zap"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/domain/user"
 	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/usecase/user"
@@ -18,7 +18,7 @@ import (
 
 type GatewayRefreshTokenService interface {
 	Execute(
-		sessCtx mongo.SessionContext,
+		sessCtx context.Context,
 		req *GatewayRefreshTokenRequestIDO,
 	) (*GatewayRefreshTokenResponseIDO, error)
 }
@@ -53,7 +53,7 @@ type GatewayRefreshTokenResponseIDO struct {
 }
 
 func (s *gatewayRefreshTokenServiceImpl) Execute(
-	sessCtx mongo.SessionContext,
+	sessCtx context.Context,
 	req *GatewayRefreshTokenRequestIDO,
 ) (*GatewayRefreshTokenResponseIDO, error) {
 	////

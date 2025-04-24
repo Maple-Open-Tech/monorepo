@@ -1,13 +1,12 @@
 package gateway
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
 	"go.uber.org/zap"
-
-	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	uc_emailer "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/usecase/emailer"
 	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/usecase/user"
@@ -19,7 +18,7 @@ import (
 )
 
 type GatewayForgotPasswordService interface {
-	Execute(sessCtx mongo.SessionContext, req *GatewayForgotPasswordRequestIDO) (*GatewayForgotPasswordResponseIDO, error)
+	Execute(sessCtx context.Context, req *GatewayForgotPasswordRequestIDO) (*GatewayForgotPasswordResponseIDO, error)
 }
 
 type gatewayForgotPasswordServiceImpl struct {
@@ -52,7 +51,7 @@ type GatewayForgotPasswordResponseIDO struct {
 	Message string `json:"message"`
 }
 
-func (s *gatewayForgotPasswordServiceImpl) Execute(sessCtx mongo.SessionContext, req *GatewayForgotPasswordRequestIDO) (*GatewayForgotPasswordResponseIDO, error) {
+func (s *gatewayForgotPasswordServiceImpl) Execute(sessCtx context.Context, req *GatewayForgotPasswordRequestIDO) (*GatewayForgotPasswordResponseIDO, error) {
 	//
 	// STEP 1: Sanization of input.
 	//

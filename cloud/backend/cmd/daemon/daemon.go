@@ -2,14 +2,14 @@
 package daemon
 
 import (
-	"net/http"
-
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
 
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/unifiedhttp"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/unifiedhttp"
 )
 
 func DaemonCmd() *cobra.Command {
@@ -28,18 +28,9 @@ func doRunDaemon() {
 		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: log}
 		}),
-		fx.Provide(
-			unifiedhttp.NewUnifiedHTTPServer,
-			fx.Annotate(
-				unifiedhttp.NewServeMux,
-				fx.ParamTags(`group:"routes"`),
-			),
-		),
-		fx.Provide(
-			unifiedhttp.AsRoute(unifiedhttp.NewEchoHandler),
-			unifiedhttp.AsRoute(unifiedhttp.NewGetHealthCheckHTTPHandler),
-			zap.NewExample,
-		),
-		fx.Invoke(func(*http.Server) {}),
+		fx.Provide(zap.NewExample),
+		fx.Provide(config.NewProvider),
+		maplesend.Module(),
+		unifiedhttp.Module(),
 	).Run()
 }

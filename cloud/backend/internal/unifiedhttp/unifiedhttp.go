@@ -8,9 +8,11 @@ import (
 
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 )
 
-func NewUnifiedHTTPServer(lc fx.Lifecycle, mux *http.ServeMux, log *zap.Logger) *http.Server {
+func NewUnifiedHTTPServer(lc fx.Lifecycle, log *zap.Logger, config *config.Configuration, mux *http.ServeMux) *http.Server {
 	srv := &http.Server{Addr: ":8000", Handler: mux}
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {

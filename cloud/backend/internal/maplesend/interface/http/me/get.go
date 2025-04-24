@@ -1,0 +1,95 @@
+// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/me/get.go
+package me
+
+import (
+	"encoding/json"
+	"errors"
+	"net/http"
+
+	"go.uber.org/zap"
+
+	"go.mongodb.org/mongo-driver/mongo"
+
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
+	svc_me "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/service/me"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
+)
+
+type GetMeHTTPHandler struct {
+	config   *config.Configuration
+	logger   *zap.Logger
+	dbClient *mongo.Client
+	service  svc_me.GetMeService
+}
+
+func NewGetMeHTTPHandler(
+	config *config.Configuration,
+	logger *zap.Logger,
+	dbClient *mongo.Client,
+	service svc_me.GetMeService,
+) *GetMeHTTPHandler {
+	return &GetMeHTTPHandler{
+		config:   config,
+		logger:   logger,
+		dbClient: dbClient,
+		service:  service,
+	}
+}
+
+func (h *GetMeHTTPHandler) Execute(w http.ResponseWriter, r *http.Request) {
+	// Set response content type
+	w.Header().Set("Content-Type", "application/json")
+
+	ctx := r.Context()
+
+	////
+	//// Start the transaction.
+	////
+
+	session, err := h.dbClient.StartSession()
+	if err != nil {
+		h.logger.Error("start session error",
+			zap.Any("error", err))
+		httperror.ResponseError(w, err)
+		return
+	}
+	defer session.EndSession(ctx)
+
+	// Define a transaction function with a series of operations
+	transactionFunc := func(sessCtx mongo.SessionContext) (interface{}, error) {
+
+		// Call service
+		response, err := h.service.Execute(sessCtx)
+		if err != nil {
+			h.logger.Error("failed to get me",
+				zap.Any("error", err))
+			return nil, err
+		}
+		return response, nil
+	}
+
+	// Start a transaction
+	result, txErr := session.WithTransaction(ctx, transactionFunc)
+	if txErr != nil {
+		h.logger.Error("session failed error",
+			zap.Any("error", txErr))
+		httperror.ResponseError(w, txErr)
+		return
+	}
+
+	// Encode response
+	if result != nil {
+		resp := result.(*svc_me.MeResponseDTO)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			h.logger.Error("failed to encode response",
+				zap.Any("error", err))
+			httperror.ResponseError(w, err)
+			return
+		}
+	} else {
+		err := errors.New("no result")
+		httperror.ResponseError(w, err)
+		return
+	}
+
+}

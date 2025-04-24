@@ -24,7 +24,7 @@ type cacheImpl struct {
 	Logger *slog.Logger
 }
 
-func NewCache(
+func NewProvider(
 	config CacheConfigurationProvider,
 	logger *slog.Logger,
 	dbClient *mongo_client.Client,

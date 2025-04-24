@@ -1,3 +1,4 @@
+// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/gateway/register.go
 package gateway
 
 import (
@@ -121,4 +122,8 @@ func (h *GatewayUserRegisterHTTPHandler) Execute(w http.ResponseWriter, r *http.
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (*GatewayUserRegisterHTTPHandler) Pattern() string {
+	return "/maplesend/api/v1/register"
 }

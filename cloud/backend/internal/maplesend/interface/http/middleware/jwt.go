@@ -59,9 +59,5 @@ func (mid *middleware) JWTProcessorMiddleware(fn http.HandlerFunc) http.HandlerF
 			http.Error(w, "attempting to access a protected endpoint", http.StatusUnauthorized)
 			return
 		}
-
-		// Flow to the next middleware without anything done.
-		ctx = context.WithValue(ctx, constants.SessionIsAuthorized, false)
-		fn(w, r.WithContext(ctx))
 	}
 }

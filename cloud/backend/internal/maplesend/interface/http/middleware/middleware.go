@@ -9,8 +9,6 @@ import (
 
 	uc_bannedipaddress "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/usecase/bannedipaddress"
 	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/usecase/user"
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/blacklist"
-	ipcb "github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/ipcountryblocker"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/jwt"
 )
 
@@ -21,25 +19,19 @@ type Middleware interface {
 
 type middleware struct {
 	logger                              *zap.Logger
-	blacklist                           blacklist.Provider
 	jwt                                 jwt.Provider
 	userGetBySessionIDUseCase           uc_user.UserGetBySessionIDUseCase
 	bannedIPAddressListAllValuesUseCase uc_bannedipaddress.BannedIPAddressListAllValuesUseCase
-	IPCountryBlocker                    ipcb.Provider
 }
 
 func NewMiddleware(
 	loggerp *zap.Logger,
-	blp blacklist.Provider,
-	ipcountryblocker ipcb.Provider,
 	jwtp jwt.Provider,
 	uc1 uc_user.UserGetBySessionIDUseCase,
 	uc2 uc_bannedipaddress.BannedIPAddressListAllValuesUseCase,
 ) Middleware {
 	return &middleware{
 		logger:                              loggerp,
-		blacklist:                           blp,
-		IPCountryBlocker:                    ipcountryblocker,
 		jwt:                                 jwtp,
 		userGetBySessionIDUseCase:           uc1,
 		bannedIPAddressListAllValuesUseCase: uc2,
@@ -62,6 +54,7 @@ func (mid *middleware) Attach(fn http.HandlerFunc) http.HandlerFunc {
 			// Apply auth middleware for protected paths
 			handler = mid.PostJWTProcessorMiddleware(handler)
 			handler = mid.JWTProcessorMiddleware(handler)
+			// handler = mid.EnforceBlacklistMiddleware(handler)
 		}
 
 		handler(w, r)
@@ -73,11 +66,7 @@ func (mid *middleware) applyBaseMiddleware(fn http.HandlerFunc) http.HandlerFunc
 	mid.logger.Debug("middleware executed")
 	// Apply middleware in reverse order (bottom up)
 	handler := fn
-	handler = mid.EnforceRestrictCountryIPsMiddleware(handler)
-	handler = mid.EnforceBlacklistMiddleware(handler)
-	handler = mid.IPAddressMiddleware(handler)
 	handler = mid.URLProcessorMiddleware(handler)
-	handler = mid.RateLimitMiddleware(handler)
 
 	return handler
 }
@@ -86,5 +75,4 @@ func (mid *middleware) applyBaseMiddleware(fn http.HandlerFunc) http.HandlerFunc
 func (mid *middleware) Shutdown(ctx context.Context) {
 	// Log a message to indicate that the HTTP server is shutting down.
 	mid.logger.Info("Gracefully shutting down HTTP middleware")
-	mid.IPCountryBlocker.Close()
 }

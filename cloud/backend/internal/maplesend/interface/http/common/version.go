@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// curl http://localhost:8000/maple-send-version
+// curl http://localhost:8000/maplesend/api/v1/version
 type GetMapleSendVersionHTTPHandler struct {
 	log *zap.Logger
 }
@@ -29,5 +29,5 @@ func (h *GetMapleSendVersionHTTPHandler) ServeHTTP(w http.ResponseWriter, r *htt
 }
 
 func (*GetMapleSendVersionHTTPHandler) Pattern() string {
-	return "/maple-send-version"
+	return "/maplesend/api/v1/version"
 }

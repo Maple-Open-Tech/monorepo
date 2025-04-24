@@ -2,6 +2,7 @@
 package middleware
 
 import (
+	"fmt"
 	"regexp"
 )
 
@@ -18,27 +19,27 @@ var (
 func init() {
 	// Exact matches
 	exactPaths = map[string]bool{
-		"/iam/api/v1/say-hello":               true,
-		"/iam/api/v1/token/introspect":        true,
-		"/iam/api/v1/profile":                 true,
-		"/iam/api/v1/me":                      true,
-		"/iam/api/v1/me/connect-wallet":       true,
-		"/iam/api/v1/me/delete":               true,
-		"/iam/api/v1/dashboard":               true,
-		"/iam/api/v1/claim-coins":             true,
-		"/iam/api/v1/transactions":            true,
-		"/iam/api/v1/me/verify-profile":       true,
-		"/iam/api/v1/public-wallets":          true,
-		"/iam/api/v1/public-wallets-by-admin": true,
-		"/iam/api/v1/users":                   true,
+		"/maplesend/api/v1/say-hello":               true,
+		"/maplesend/api/v1/token/introspect":        true,
+		"/maplesend/api/v1/profile":                 true,
+		"/maplesend/api/v1/me":                      true,
+		"/maplesend/api/v1/me/connect-wallet":       true,
+		"/maplesend/api/v1/me/delete":               true,
+		"/maplesend/api/v1/dashboard":               true,
+		"/maplesend/api/v1/claim-coins":             true,
+		"/maplesend/api/v1/transactions":            true,
+		"/maplesend/api/v1/me/verify-profile":       true,
+		"/maplesend/api/v1/public-wallets":          true,
+		"/maplesend/api/v1/public-wallets-by-admin": true,
+		"/maplesend/api/v1/users":                   true,
 	}
 
 	// Pattern matches
 	patterns := []string{
-		"^/iam/api/v1/user/[0-9]+$",                      // Regex designed for non-zero integers.
-		"^/iam/api/v1/wallet/[0-9a-f]+$",                 // Regex designed for mongodb ids.
-		"^/iam/api/v1/public-wallets/0x[0-9a-fA-F]{40}$", // Regex designed for ethereum addresses.
-		"^/iam/api/v1/users/[0-9a-f]+$",                  // Regex designed for mongodb ids.
+		"^/maplesend/api/v1/user/[0-9]+$",                      // Regex designed for non-zero integers.
+		"^/maplesend/api/v1/wallet/[0-9a-f]+$",                 // Regex designed for mongodb ids.
+		"^/maplesend/api/v1/public-wallets/0x[0-9a-fA-F]{40}$", // Regex designed for ethereum addresses.
+		"^/maplesend/api/v1/users/[0-9a-f]+$",                  // Regex designed for mongodb ids.
 	}
 
 	// Precompile patterns
@@ -56,14 +57,14 @@ func isProtectedPath(path string) bool {
 
 	// Check exact matches first (O(1) lookup)
 	if exactPaths[path] {
-		// fmt.Println("isProtectedPath - ✅ found via map") // For debugging purposes only.
+		fmt.Println("isProtectedPath - ✅ found via map") // For debugging purposes only.
 		return true
 	}
 
 	// Check patterns
 	for _, route := range patternRoutes {
 		if route.regex.MatchString(path) {
-			// fmt.Println("isProtectedPath - ✅ found via regex") // For debugging purposes only.
+			fmt.Println("isProtectedPath - ✅ found via regex") // For debugging purposes only.
 			return true
 		}
 	}

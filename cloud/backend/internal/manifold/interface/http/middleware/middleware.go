@@ -1,8 +1,9 @@
 package middleware
 
 import (
-	"log/slog"
 	"net/http"
+
+	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/blacklist"
 	ipcb "github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/ipcountryblocker"
@@ -14,13 +15,13 @@ type Middleware interface {
 }
 
 type middleware struct {
-	Logger           *slog.Logger
+	Logger           *zap.Logger
 	Blacklist        blacklist.Provider
 	IPCountryBlocker ipcb.Provider
 }
 
 func NewMiddleware(
-	loggerp *slog.Logger,
+	loggerp *zap.Logger,
 	blp blacklist.Provider,
 	ipcountryblocker ipcb.Provider,
 ) Middleware {

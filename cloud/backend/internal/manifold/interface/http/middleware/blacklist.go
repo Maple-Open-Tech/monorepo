@@ -1,8 +1,9 @@
 package middleware
 
 import (
-	"log/slog"
 	"net/http"
+
+	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
 )
@@ -28,10 +29,10 @@ func (mid *middleware) EnforceBlacklistMiddleware(next http.HandlerFunc) http.Ha
 			// is to not clog the console log with warnings.
 			if !mid.Blacklist.IsBannedURL(r.URL.Path) {
 				mid.Logger.Warn("rejected request by ip",
-					slog.Any("url", r.URL.Path),
-					slog.String("ip_address", ipAddress),
-					slog.String("proxies", proxies),
-					slog.Any("middleware", "EnforceBlacklistMiddleware"))
+					zap.Any("url", r.URL.Path),
+					zap.String("ip_address", ipAddress),
+					zap.String("proxies", proxies),
+					zap.Any("middleware", "EnforceBlacklistMiddleware"))
 			}
 			http.Error(w, "forbidden at this time", http.StatusForbidden)
 			return
@@ -47,10 +48,10 @@ func (mid *middleware) EnforceBlacklistMiddleware(next http.HandlerFunc) http.Ha
 			// purpose of this code is to not clog the console log with warnings.
 			if !mid.Blacklist.IsBannedIPAddress(ipAddress) {
 				mid.Logger.Warn("rejected request by url",
-					slog.Any("url", r.URL.Path),
-					slog.String("ip_address", ipAddress),
-					slog.String("proxies", proxies),
-					slog.Any("middleware", "EnforceBlacklistMiddleware"))
+					zap.Any("url", r.URL.Path),
+					zap.String("ip_address", ipAddress),
+					zap.String("proxies", proxies),
+					zap.Any("middleware", "EnforceBlacklistMiddleware"))
 			}
 
 			// DEVELOPERS NOTE:

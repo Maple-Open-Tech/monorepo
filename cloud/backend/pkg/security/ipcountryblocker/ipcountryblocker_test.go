@@ -6,10 +6,10 @@ import (
 	"os"
 	"testing"
 
-	"log/slog"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
-	"github.com/stretchr/testify/assert"
 )
 
 // testProvider is a test-specific wrapper that allows access to internal fields
@@ -23,7 +23,7 @@ type testProvider struct {
 // newTestProvider creates a test provider instance with access to internal fields.
 // This allows us to verify the internal state in our tests while maintaining
 // encapsulation in production code.
-func newTestProvider(cfg *config.Configuration, logger *slog.Logger) testProvider {
+func newTestProvider(cfg *config.Configuration, logger *zap.Logger) testProvider {
 	p := NewProvider(cfg, logger)
 	return testProvider{
 		Provider: p,
@@ -42,7 +42,7 @@ func TestNewProvider(t *testing.T) {
 		},
 	}
 	// Initialize logger with JSON output for structured test logs
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	logger := zap.New(zap.NewJSONHandler(os.Stdout, nil))
 
 	// Create test provider and verify internal components
 	p := newTestProvider(cfg, logger)
@@ -247,6 +247,6 @@ func setupTestProvider(t *testing.T) Provider {
 			BannedCountries: []string{"US", "CN"},
 		},
 	}
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	logger := zap.New(zap.NewJSONHandler(os.Stdout, nil))
 	return NewProvider(cfg, logger)
 }

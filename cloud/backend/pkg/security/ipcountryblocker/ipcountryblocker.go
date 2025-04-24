@@ -1,76 +1,124 @@
-package blacklist
+package ipcountryblocker
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"io/ioutil"
-	"os"
+	"log"
+	"net"
+	"sync"
+
+	"github.com/oschwald/geoip2-golang"
+	"go.uber.org/zap"
+
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 )
 
-// Provider provides an interface for abstracting time.
+// Provider defines the interface for IP-based country blocking operations.
+// It provides methods to check if an IP or country is blocked and to retrieve
+// country codes for given IP addresses.
 type Provider interface {
-	IsBannedIPAddress(ipAddress string) bool
-	IsBannedURL(url string) bool
+	// IsBlockedCountry checks if a country is in the blocked list.
+	// isoCode must be an ISO 3166-1 alpha-2 country code.
+	IsBlockedCountry(isoCode string) bool
+
+	// IsBlockedIP determines if an IP address originates from a blocked country.
+	// Returns false for nil IP addresses or if country lookup fails.
+	IsBlockedIP(ctx context.Context, ip net.IP) bool
+
+	// GetCountryCode returns the ISO 3166-1 alpha-2 country code for an IP address.
+	// Returns an error if the lookup fails or no country is found.
+	GetCountryCode(ctx context.Context, ip net.IP) (string, error)
+
+	// Close releases resources associated with the provider.
+	Close() error
 }
 
-type blacklistProvider struct {
-	bannedIPAddresses map[string]bool
-	bannedURLs        map[string]bool
+// provider implements the Provider interface using MaxMind's GeoIP2 database.
+type provider struct {
+	db               *geoip2.Reader
+	blockedCountries map[string]struct{} // Uses empty struct to optimize memory
+	logger           *zap.Logger
+	mu               sync.RWMutex // Protects concurrent access to blockedCountries
 }
 
-// readBlacklistFileContent reads the contents of the blacklist file and returns
-// the list of banned items (ex: IP, URLs, etc).
-func readBlacklistFileContent(filePath string) ([]string, error) {
-	// Check if the file exists
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("file %s does not exist", filePath)
-	}
-
-	// Read the file contents
-	data, err := ioutil.ReadFile(filePath)
+// NewProvider creates a new IP country blocking provider using the provided configuration.
+// It initializes the GeoIP2 database and sets up the blocked countries list.
+// Fatally crashes the entire application if the database cannot be opened.
+func NewProvider(cfg *config.Configuration, logger *zap.Logger) Provider {
+	db, err := geoip2.Open(cfg.App.GeoLiteDBPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file %s: %v", filePath, err)
+		log.Fatalf("failed to open GeoLite2 DB: %v", err)
 	}
 
-	// Parse the JSON content as a list of IPs
-	var ips []string
-	if err := json.Unmarshal(data, &ips); err != nil {
-		return nil, fmt.Errorf("failed to parse JSON file %s: %v", filePath, err)
+	blocked := make(map[string]struct{}, len(cfg.App.BannedCountries))
+	for _, country := range cfg.App.BannedCountries {
+		blocked[country] = struct{}{}
 	}
 
-	return ips, nil
-}
+	logger.Debug("ip blocker initialized",
+		zap.String("db_path", cfg.App.GeoLiteDBPath),
+		zap.Any("blocked_countries", cfg.App.BannedCountries))
 
-// NewProvider Provider contructor that returns the default time provider.
-func NewProvider() Provider {
-	bannedIPAddresses := make(map[string]bool)
-	bannedIPAddressesFilePath := "static/blacklist/ips.json"
-	ips, err := readBlacklistFileContent(bannedIPAddressesFilePath)
-	if err == nil { // Aka: if the file exists...
-		for _, ip := range ips {
-			bannedIPAddresses[ip] = true
-		}
-	}
-
-	bannedURLs := make(map[string]bool)
-	bannedURLsFilePath := "static/blacklist/urls.json"
-	urls, err := readBlacklistFileContent(bannedURLsFilePath)
-	if err == nil { // Aka: if the file exists...
-		for _, url := range urls {
-			bannedURLs[url] = true
-		}
-	}
-
-	return blacklistProvider{
-		bannedIPAddresses: bannedIPAddresses,
-		bannedURLs:        bannedURLs,
+	return &provider{
+		db:               db,
+		blockedCountries: blocked,
+		logger:           logger,
 	}
 }
 
-func (p blacklistProvider) IsBannedIPAddress(ipAddress string) bool {
-	return p.bannedIPAddresses[ipAddress]
+// IsBlockedCountry checks if a country code exists in the blocked countries map.
+// Thread-safe through RLock.
+func (p *provider) IsBlockedCountry(isoCode string) bool {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	_, exists := p.blockedCountries[isoCode]
+	return exists
 }
 
-func (p blacklistProvider) IsBannedURL(url string) bool {
-	return p.bannedURLs[url]
+// IsBlockedIP performs a country lookup for the IP and checks if it's blocked.
+// Returns false for nil IPs or failed lookups to fail safely.
+func (p *provider) IsBlockedIP(ctx context.Context, ip net.IP) bool {
+	if ip == nil {
+		return false
+	}
+
+	code, err := p.GetCountryCode(ctx, ip)
+	if err != nil {
+		// Developers Note:
+		// Comment this console log as it contributes a `noisy` server log.
+		// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+		// p.logger.WarnContext(ctx, "failed to get country code",
+		// 	zap.Any("ip", ip),
+		// 	zap.Any("error", err))
+		// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+		// Developers Note:
+		// If the country d.n.e. exist that means we will return with `false`
+		// indicating this IP address is allowed to access our server. If this
+		// is concerning then you might set this to `true` to block on all
+		// IP address which are not categorized by country.
+		return false
+	}
+
+	return p.IsBlockedCountry(code)
+}
+
+// GetCountryCode performs a GeoIP2 database lookup to determine an IP's country.
+// Returns an error if the lookup fails or no country is found.
+func (p *provider) GetCountryCode(ctx context.Context, ip net.IP) (string, error) {
+	record, err := p.db.Country(ip)
+	if err != nil {
+		return "", fmt.Errorf("lookup country: %w", err)
+	}
+
+	if record == nil || record.Country.IsoCode == "" {
+		return "", fmt.Errorf("no country found for IP: %v", ip)
+	}
+
+	return record.Country.IsoCode, nil
+}
+
+// Close cleanly shuts down the GeoIP2 database connection.
+func (p *provider) Close() error {
+	return p.db.Close()
 }

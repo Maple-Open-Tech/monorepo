@@ -6,6 +6,7 @@ import (
 	unifiedhttp "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/manifold/interface/http"
 	commonhttp "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/common"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/gateway"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/me"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/middleware"
 )
 
@@ -23,6 +24,10 @@ func Module() fx.Option {
 			unifiedhttp.AsRoute(gateway.NewGatewayResetPasswordHTTPHandler),
 			unifiedhttp.AsRoute(gateway.NewGatewayForgotPasswordHTTPHandler),
 			unifiedhttp.AsRoute(gateway.NewGatewayVerifyEmailHTTPHandler),
+			unifiedhttp.AsRoute(me.NewGetMeHTTPHandler),
+			unifiedhttp.AsRoute(me.NewDeleteMeHTTPHandler),
+			unifiedhttp.AsRoute(me.NewPutUpdateMeHTTPHandler),
+			unifiedhttp.AsRoute(me.NewPostVerifyProfileHTTPHandler),
 		),
 	)
 }

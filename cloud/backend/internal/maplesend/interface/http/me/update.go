@@ -14,15 +14,17 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/middleware"
 	svc_me "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/service/me"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
 type PutUpdateMeHTTPHandler struct {
-	config   *config.Configuration
-	logger   *zap.Logger
-	dbClient *mongo.Client
-	service  svc_me.UpdateMeService
+	config     *config.Configuration
+	logger     *zap.Logger
+	dbClient   *mongo.Client
+	service    svc_me.UpdateMeService
+	middleware middleware.Middleware
 }
 
 func NewPutUpdateMeHTTPHandler(
@@ -30,13 +32,24 @@ func NewPutUpdateMeHTTPHandler(
 	logger *zap.Logger,
 	dbClient *mongo.Client,
 	service svc_me.UpdateMeService,
+	middleware middleware.Middleware,
 ) *PutUpdateMeHTTPHandler {
 	return &PutUpdateMeHTTPHandler{
-		config:   config,
-		logger:   logger,
-		dbClient: dbClient,
-		service:  service,
+		config:     config,
+		logger:     logger,
+		dbClient:   dbClient,
+		service:    service,
+		middleware: middleware,
 	}
+}
+
+func (*PutUpdateMeHTTPHandler) Pattern() string {
+	return "/maplesend/api/v1/me"
+}
+
+func (r *PutUpdateMeHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// Apply MaplesSend middleware before handling the request
+	r.middleware.Attach(r.Execute)(w, req)
 }
 
 func (h *PutUpdateMeHTTPHandler) unmarshalRequest(

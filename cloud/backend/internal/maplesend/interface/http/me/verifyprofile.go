@@ -8,20 +8,21 @@ import (
 	"io"
 	"net/http"
 
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.uber.org/zap"
 
-	"go.mongodb.org/mongo-driver/v2/mongo"
-
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/middleware"
 	svc_me "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/service/me"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
 type PostVerifyProfileHTTPHandler struct {
-	config   *config.Configuration
-	logger   *zap.Logger
-	dbClient *mongo.Client
-	service  svc_me.VerifyProfileService
+	config     *config.Configuration
+	logger     *zap.Logger
+	dbClient   *mongo.Client
+	service    svc_me.VerifyProfileService
+	middleware middleware.Middleware
 }
 
 func NewPostVerifyProfileHTTPHandler(
@@ -29,13 +30,24 @@ func NewPostVerifyProfileHTTPHandler(
 	logger *zap.Logger,
 	dbClient *mongo.Client,
 	service svc_me.VerifyProfileService,
+	middleware middleware.Middleware,
 ) *PostVerifyProfileHTTPHandler {
 	return &PostVerifyProfileHTTPHandler{
-		config:   config,
-		logger:   logger,
-		dbClient: dbClient,
-		service:  service,
+		config:     config,
+		logger:     logger,
+		dbClient:   dbClient,
+		service:    service,
+		middleware: middleware,
 	}
+}
+
+func (*PostVerifyProfileHTTPHandler) Pattern() string {
+	return "/maplesend/api/v1/verify-profile"
+}
+
+func (r *PostVerifyProfileHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// Apply MaplesSend middleware before handling the request
+	r.middleware.Attach(r.Execute)(w, req)
 }
 
 func (h *PostVerifyProfileHTTPHandler) unmarshalRequest(

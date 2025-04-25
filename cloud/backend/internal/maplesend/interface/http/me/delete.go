@@ -13,15 +13,17 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/middleware"
 	svc_me "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/service/me"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
 type DeleteMeHTTPHandler struct {
-	config   *config.Configuration
-	logger   *zap.Logger
-	dbClient *mongo.Client
-	service  svc_me.DeleteMeService
+	config     *config.Configuration
+	logger     *zap.Logger
+	dbClient   *mongo.Client
+	service    svc_me.DeleteMeService
+	middleware middleware.Middleware
 }
 
 func NewDeleteMeHTTPHandler(
@@ -29,13 +31,24 @@ func NewDeleteMeHTTPHandler(
 	logger *zap.Logger,
 	dbClient *mongo.Client,
 	service svc_me.DeleteMeService,
+	middleware middleware.Middleware,
 ) *DeleteMeHTTPHandler {
 	return &DeleteMeHTTPHandler{
-		config:   config,
-		logger:   logger,
-		dbClient: dbClient,
-		service:  service,
+		config:     config,
+		logger:     logger,
+		dbClient:   dbClient,
+		service:    service,
+		middleware: middleware,
 	}
+}
+
+func (*DeleteMeHTTPHandler) Pattern() string {
+	return "/maplesend/api/v1/me"
+}
+
+func (r *DeleteMeHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// Apply MaplesSend middleware before handling the request
+	r.middleware.Attach(r.Execute)(w, req)
 }
 
 func (h *DeleteMeHTTPHandler) unmarshalRequest(

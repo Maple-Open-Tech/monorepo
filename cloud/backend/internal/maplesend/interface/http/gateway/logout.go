@@ -8,26 +8,39 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/middleware"
 	sv_gateway "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/service/gateway"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
 type GatewayLogoutHTTPHandler struct {
-	logger   *zap.Logger
-	dbClient *mongo.Client
-	service  sv_gateway.GatewayLogoutService
+	logger     *zap.Logger
+	dbClient   *mongo.Client
+	service    sv_gateway.GatewayLogoutService
+	middleware middleware.Middleware
 }
 
 func NewGatewayLogoutHTTPHandler(
 	logger *zap.Logger,
 	dbClient *mongo.Client,
 	service sv_gateway.GatewayLogoutService,
+	middleware middleware.Middleware,
 ) *GatewayLogoutHTTPHandler {
 	return &GatewayLogoutHTTPHandler{
-		logger:   logger,
-		dbClient: dbClient,
-		service:  service,
+		logger:     logger,
+		dbClient:   dbClient,
+		service:    service,
+		middleware: middleware,
 	}
+}
+
+func (r *GatewayLogoutHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// Apply MaplesSend middleware before handling the request
+	r.middleware.Attach(r.Execute)(w, req)
+}
+
+func (*GatewayLogoutHTTPHandler) Pattern() string {
+	return "/maplesend/api/v1/logout"
 }
 
 func (h *GatewayLogoutHTTPHandler) Execute(w http.ResponseWriter, r *http.Request) {

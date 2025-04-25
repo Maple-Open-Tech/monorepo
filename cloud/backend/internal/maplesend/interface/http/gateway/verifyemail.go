@@ -12,26 +12,39 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.uber.org/zap"
 
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/middleware"
 	sv_gateway "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/service/gateway"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
 type GatewayVerifyEmailHTTPHandler struct {
-	logger   *zap.Logger
-	dbClient *mongo.Client
-	service  sv_gateway.GatewayVerifyEmailService
+	logger     *zap.Logger
+	dbClient   *mongo.Client
+	service    sv_gateway.GatewayVerifyEmailService
+	middleware middleware.Middleware
 }
 
 func NewGatewayVerifyEmailHTTPHandler(
 	logger *zap.Logger,
 	dbClient *mongo.Client,
 	service sv_gateway.GatewayVerifyEmailService,
+	middleware middleware.Middleware,
 ) *GatewayVerifyEmailHTTPHandler {
 	return &GatewayVerifyEmailHTTPHandler{
-		logger:   logger,
-		dbClient: dbClient,
-		service:  service,
+		logger:     logger,
+		dbClient:   dbClient,
+		service:    service,
+		middleware: middleware,
 	}
+}
+
+func (*GatewayVerifyEmailHTTPHandler) Pattern() string {
+	return "/maplesend/api/v1/verify-email-code"
+}
+
+func (r *GatewayVerifyEmailHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// Apply MaplesSend middleware before handling the request
+	r.middleware.Attach(r.Execute)(w, req)
 }
 
 func (h *GatewayVerifyEmailHTTPHandler) unmarshalVerifyRequest(

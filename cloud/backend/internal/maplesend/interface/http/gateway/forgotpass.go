@@ -8,30 +8,42 @@ import (
 	"net/http"
 	_ "time/tzdata"
 
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.uber.org/zap"
 
-	"go.mongodb.org/mongo-driver/v2/mongo"
-
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/middleware"
 	sv_gateway "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/service/gateway"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
 type GatewayForgotPasswordHTTPHandler struct {
-	logger   *zap.Logger
-	dbClient *mongo.Client
-	service  sv_gateway.GatewayForgotPasswordService
+	logger     *zap.Logger
+	dbClient   *mongo.Client
+	service    sv_gateway.GatewayForgotPasswordService
+	middleware middleware.Middleware
 }
 
 func NewGatewayForgotPasswordHTTPHandler(
 	logger *zap.Logger,
 	dbClient *mongo.Client,
 	service sv_gateway.GatewayForgotPasswordService,
+	middleware middleware.Middleware,
 ) *GatewayForgotPasswordHTTPHandler {
 	return &GatewayForgotPasswordHTTPHandler{
-		logger:   logger,
-		dbClient: dbClient,
-		service:  service,
+		logger:     logger,
+		dbClient:   dbClient,
+		service:    service,
+		middleware: middleware,
 	}
+}
+
+func (*GatewayForgotPasswordHTTPHandler) Pattern() string {
+	return "/maplesend/api/v1/forgot-password"
+}
+
+func (r *GatewayForgotPasswordHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// Apply MaplesSend middleware before handling the request
+	r.middleware.Attach(r.Execute)(w, req)
 }
 
 func (h *GatewayForgotPasswordHTTPHandler) unmarshalLoginRequest(

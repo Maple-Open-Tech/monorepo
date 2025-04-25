@@ -12,26 +12,39 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/middleware"
 	sv_gateway "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/service/gateway"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
 type GatewayResetPasswordHTTPHandler struct {
-	logger   *zap.Logger
-	dbClient *mongo.Client
-	service  sv_gateway.GatewayResetPasswordService
+	logger     *zap.Logger
+	dbClient   *mongo.Client
+	service    sv_gateway.GatewayResetPasswordService
+	middleware middleware.Middleware
 }
 
 func NewGatewayResetPasswordHTTPHandler(
 	logger *zap.Logger,
 	dbClient *mongo.Client,
 	service sv_gateway.GatewayResetPasswordService,
+	middleware middleware.Middleware,
 ) *GatewayResetPasswordHTTPHandler {
 	return &GatewayResetPasswordHTTPHandler{
-		logger:   logger,
-		dbClient: dbClient,
-		service:  service,
+		logger:     logger,
+		dbClient:   dbClient,
+		service:    service,
+		middleware: middleware,
 	}
+}
+
+func (*GatewayResetPasswordHTTPHandler) Pattern() string {
+	return "/maplesend/api/v1/reset-password"
+}
+
+func (r *GatewayResetPasswordHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// Apply MaplesSend middleware before handling the request
+	r.middleware.Attach(r.Execute)(w, req)
 }
 
 func (h *GatewayResetPasswordHTTPHandler) unmarshalLoginRequest(

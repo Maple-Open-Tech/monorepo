@@ -40,6 +40,10 @@ func NewGatewayUserRegisterHTTPHandler(
 	}
 }
 
+func (*GatewayUserRegisterHTTPHandler) Pattern() string {
+	return "/maplesend/api/v1/register"
+}
+
 func (r *GatewayUserRegisterHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Apply MaplesSend middleware before handling the request
 	r.middleware.Attach(r.Execute)(w, req)
@@ -122,8 +126,4 @@ func (h *GatewayUserRegisterHTTPHandler) Execute(w http.ResponseWriter, r *http.
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-}
-
-func (*GatewayUserRegisterHTTPHandler) Pattern() string {
-	return "/maplesend/api/v1/register"
 }

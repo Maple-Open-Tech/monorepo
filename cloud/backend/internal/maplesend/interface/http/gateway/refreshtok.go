@@ -12,26 +12,39 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/middleware"
 	sv_gateway "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/service/gateway"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
 type GatewayRefreshTokenHTTPHandler struct {
-	logger   *zap.Logger
-	dbClient *mongo.Client
-	service  sv_gateway.GatewayRefreshTokenService
+	logger     *zap.Logger
+	dbClient   *mongo.Client
+	service    sv_gateway.GatewayRefreshTokenService
+	middleware middleware.Middleware
 }
 
 func NewGatewayRefreshTokenHTTPHandler(
 	logger *zap.Logger,
 	dbClient *mongo.Client,
 	service sv_gateway.GatewayRefreshTokenService,
+	middleware middleware.Middleware,
 ) *GatewayRefreshTokenHTTPHandler {
 	return &GatewayRefreshTokenHTTPHandler{
-		logger:   logger,
-		dbClient: dbClient,
-		service:  service,
+		logger:     logger,
+		dbClient:   dbClient,
+		service:    service,
+		middleware: middleware,
 	}
+}
+
+func (*GatewayRefreshTokenHTTPHandler) Pattern() string {
+	return "/maplesend/api/v1/login/token/refresh"
+}
+
+func (r *GatewayRefreshTokenHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// Apply MaplesSend middleware before handling the request
+	r.middleware.Attach(r.Execute)(w, req)
 }
 
 func (h *GatewayRefreshTokenHTTPHandler) unmarshalRefreshTokenRequest(

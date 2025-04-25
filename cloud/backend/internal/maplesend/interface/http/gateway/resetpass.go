@@ -39,7 +39,7 @@ func NewGatewayResetPasswordHTTPHandler(
 }
 
 func (*GatewayResetPasswordHTTPHandler) Pattern() string {
-	return "/maplesend/api/v1/reset-password"
+	return "POST /maplesend/api/v1/reset-password"
 }
 
 func (r *GatewayResetPasswordHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {

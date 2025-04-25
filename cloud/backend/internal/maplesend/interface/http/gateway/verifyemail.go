@@ -39,7 +39,7 @@ func NewGatewayVerifyEmailHTTPHandler(
 }
 
 func (*GatewayVerifyEmailHTTPHandler) Pattern() string {
-	return "/maplesend/api/v1/verify-email-code"
+	return "POST /maplesend/api/v1/verify-email-code"
 }
 
 func (r *GatewayVerifyEmailHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {

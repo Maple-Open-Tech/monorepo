@@ -38,7 +38,7 @@ func NewGatewayForgotPasswordHTTPHandler(
 }
 
 func (*GatewayForgotPasswordHTTPHandler) Pattern() string {
-	return "/maplesend/api/v1/forgot-password"
+	return "POST /maplesend/api/v1/forgot-password"
 }
 
 func (r *GatewayForgotPasswordHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {

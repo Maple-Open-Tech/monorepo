@@ -40,7 +40,7 @@ func NewGatewayLoginHTTPHandler(
 }
 
 func (*GatewayLoginHTTPHandler) Pattern() string {
-	return "/maplesend/api/v1/login"
+	return "POST /maplesend/api/v1/login"
 }
 
 func (r *GatewayLoginHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {

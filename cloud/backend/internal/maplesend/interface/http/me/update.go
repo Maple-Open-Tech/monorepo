@@ -43,6 +43,10 @@ func NewPutUpdateMeHTTPHandler(
 	}
 }
 
+func (*PutUpdateMeHTTPHandler) Pattern() string {
+	return "PUT /maplesend/api/v1/me"
+}
+
 func (r *PutUpdateMeHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Apply MaplesSend middleware before handling the request
 	r.middleware.Attach(r.Execute)(w, req)

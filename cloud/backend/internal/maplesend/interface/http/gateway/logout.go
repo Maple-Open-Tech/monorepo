@@ -40,7 +40,7 @@ func (r *GatewayLogoutHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Re
 }
 
 func (*GatewayLogoutHTTPHandler) Pattern() string {
-	return "/maplesend/api/v1/logout"
+	return "POST /maplesend/api/v1/logout"
 }
 
 func (h *GatewayLogoutHTTPHandler) Execute(w http.ResponseWriter, r *http.Request) {

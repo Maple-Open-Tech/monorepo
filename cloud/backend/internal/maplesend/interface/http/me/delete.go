@@ -42,6 +42,10 @@ func NewDeleteMeHTTPHandler(
 	}
 }
 
+func (*DeleteMeHTTPHandler) Pattern() string {
+	return "DELETE /maplesend/api/v1/me"
+}
+
 func (r *DeleteMeHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Apply MaplesSend middleware before handling the request
 	r.middleware.Attach(r.Execute)(w, req)

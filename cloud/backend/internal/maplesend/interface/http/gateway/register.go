@@ -41,7 +41,7 @@ func NewGatewayUserRegisterHTTPHandler(
 }
 
 func (*GatewayUserRegisterHTTPHandler) Pattern() string {
-	return "/maplesend/api/v1/register"
+	return "POST /maplesend/api/v1/register"
 }
 
 func (r *GatewayUserRegisterHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {

@@ -42,7 +42,7 @@ func NewPostVerifyProfileHTTPHandler(
 }
 
 func (*PostVerifyProfileHTTPHandler) Pattern() string {
-	return "/maplesend/api/v1/verify-profile"
+	return "POST /maplesend/api/v1/verify-profile"
 }
 
 func (r *PostVerifyProfileHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {

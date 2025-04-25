@@ -19,9 +19,12 @@ func NewSecureBytes(b []byte) (*SecureBytes, error) {
 
 	buffer := memguard.NewBuffer(len(b))
 
-	copy(buffer.Bytes(), b)
+	// Check if buffer was created successfully
+	if buffer == nil {
+		return nil, errors.New("failed to create buffer")
+	}
 
-	buffer.Lock()
+	copy(buffer.Bytes(), b)
 
 	return &SecureBytes{buffer: buffer}, nil
 }

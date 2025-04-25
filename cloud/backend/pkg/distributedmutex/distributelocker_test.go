@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/redis/go-redis/v9"
 )
 
@@ -38,7 +40,8 @@ func (m *mockRedisClient) ScriptLoad(ctx context.Context, script string) *redis.
 }
 
 func TestNewAdapter(t *testing.T) {
-	adapter := NewAdapter(zap.Default(), &mockRedisClient{})
+	logger, _ := zap.NewDevelopment()
+	adapter := NewAdapter(logger, &mockRedisClient{})
 	if adapter == nil {
 		t.Fatal("expected non-nil adapter")
 	}
@@ -46,7 +49,8 @@ func TestNewAdapter(t *testing.T) {
 
 func TestAcquireAndRelease(t *testing.T) {
 	ctx := context.Background()
-	adapter := NewAdapter(zap.Default(), &mockRedisClient{})
+	logger, _ := zap.NewDevelopment()
+	adapter := NewAdapter(logger, &mockRedisClient{})
 
 	adapter.Acquire(ctx, "test-key")
 	adapter.Acquiref(ctx, "test-key-%d", 1)

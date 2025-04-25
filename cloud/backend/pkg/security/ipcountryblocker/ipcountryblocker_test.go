@@ -3,7 +3,6 @@ package ipcountryblocker
 import (
 	"context"
 	"net"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,7 +41,7 @@ func TestNewProvider(t *testing.T) {
 		},
 	}
 	// Initialize logger with JSON output for structured test logs
-	logger := zap.New(zap.NewJSONHandler(os.Stdout, nil))
+	logger, _ := zap.NewDevelopment()
 
 	// Create test provider and verify internal components
 	p := newTestProvider(cfg, logger)
@@ -247,6 +246,6 @@ func setupTestProvider(t *testing.T) Provider {
 			BannedCountries: []string{"US", "CN"},
 		},
 	}
-	logger := zap.New(zap.NewJSONHandler(os.Stdout, nil))
+	logger, _ := zap.NewDevelopment()
 	return NewProvider(cfg, logger)
 }

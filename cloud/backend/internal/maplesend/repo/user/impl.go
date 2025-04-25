@@ -6,7 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
@@ -24,13 +24,12 @@ func NewRepository(appCfg *config.Configuration, loggerp *zap.Logger, client *mo
 	// ctx := context.Background()
 	uc := client.Database(appCfg.DB.MapleSendName).Collection("users")
 
-	// // For debugging purposes only or if you are going to recreate new indexes.
-	// if _, err := uc.Indexes().DropAll(context.TODO()); err != nil {
-	// 	loggerp.Warn("failed deleting all indexes",
-	// 		zap.Any("err", err))
-
-	// 	// Do not crash app, just continue.
-	// }
+	// For debugging purposes only or if you are going to recreate new indexes.
+	if err := uc.Indexes().DropAll(context.TODO()); err != nil {
+		loggerp.Warn("failed deleting all indexes",
+			zap.Any("err", err))
+		// Do not crash app, just continue.
+	}
 
 	// Note:
 	// * 1 for ascending

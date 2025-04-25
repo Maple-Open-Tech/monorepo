@@ -5,7 +5,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	dom_banip "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/domain/bannedipaddress"
 )

@@ -27,7 +27,7 @@ func doRunDaemon() {
 		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: log}
 		}),
-		fx.Provide(zap.NewExample),
+		fx.Provide(zap.NewDevelopment),
 		fx.Provide(config.NewProvider),
 		manifold.Module(),
 	).Run()

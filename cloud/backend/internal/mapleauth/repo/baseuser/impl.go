@@ -22,7 +22,7 @@ type userStorerImpl struct {
 
 func NewRepository(appCfg *config.Configuration, loggerp *zap.Logger, client *mongo.Client) dom_user.Repository {
 	// ctx := context.Background()
-	uc := client.Database(appCfg.DB.MapleSendName).Collection("users")
+	uc := client.Database(appCfg.DB.MapleAuthName).Collection("users")
 
 	// For debugging purposes only or if you are going to recreate new indexes.
 	if err := uc.Indexes().DropAll(context.TODO()); err != nil {

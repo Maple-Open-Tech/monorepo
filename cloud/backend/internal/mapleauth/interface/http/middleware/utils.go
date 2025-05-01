@@ -19,28 +19,12 @@ var (
 func init() {
 	// Exact matches
 	exactPaths = map[string]bool{
-		"/mapleauth/api/v1/say-hello":               true,
-		"/mapleauth/api/v1/token/introspect":        true,
-		"/mapleauth/api/v1/profile":                 true,
-		"/mapleauth/api/v1/me":                      true,
-		"/mapleauth/api/v1/me/connect-wallet":       true,
-		"/mapleauth/api/v1/me/delete":               true,
-		"/mapleauth/api/v1/dashboard":               true,
-		"/mapleauth/api/v1/claim-coins":             true,
-		"/mapleauth/api/v1/transactions":            true,
-		"/mapleauth/api/v1/me/verify-profile":       true,
-		"/mapleauth/api/v1/public-wallets":          true,
-		"/mapleauth/api/v1/public-wallets-by-admin": true,
-		"/mapleauth/api/v1/users":                   true,
+		// "/mapleauth/api/v1/reset-password":      true,
+		"/mapleauth/api/v1/login/token/refresh": true,
 	}
 
 	// Pattern matches
-	patterns := []string{
-		"^/mapleauth/api/v1/user/[0-9]+$",                      // Regex designed for non-zero integers.
-		"^/mapleauth/api/v1/wallet/[0-9a-f]+$",                 // Regex designed for mongodb ids.
-		"^/mapleauth/api/v1/public-wallets/0x[0-9a-fA-F]{40}$", // Regex designed for ethereum addresses.
-		"^/mapleauth/api/v1/users/[0-9a-f]+$",                  // Regex designed for mongodb ids.
-	}
+	patterns := []string{}
 
 	// Precompile patterns
 	patternRoutes = make([]protectedRoute, len(patterns))

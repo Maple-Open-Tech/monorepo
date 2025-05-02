@@ -3,7 +3,6 @@ package securestring
 import (
 	"errors"
 	"fmt"
-	"runtime/debug"
 
 	"github.com/awnumar/memguard"
 )
@@ -15,7 +14,6 @@ type SecureString struct {
 
 // NewSecureString creates a new SecureString instance from the given string.
 func NewSecureString(s string) (*SecureString, error) {
-	fmt.Printf("NewSecureString: Creating with length %d\n", len(s))
 	if len(s) == 0 {
 		return nil, errors.New("string cannot be empty")
 	}
@@ -27,8 +25,6 @@ func NewSecureString(s string) (*SecureString, error) {
 	if buffer == nil {
 		return nil, errors.New("failed to create buffer")
 	}
-
-	fmt.Printf("NewSecureString: Buffer created successfully, IsAlive: %v\n", buffer.IsAlive())
 
 	return &SecureString{buffer: buffer}, nil
 }
@@ -43,7 +39,6 @@ func (ss *SecureString) String() string {
 		fmt.Println("String(): buffer is not alive")
 		return ""
 	}
-	fmt.Printf("String(): Accessing buffer of size %d\n", ss.buffer.Size())
 	return ss.buffer.String()
 }
 
@@ -56,25 +51,19 @@ func (ss *SecureString) Bytes() []byte {
 		fmt.Println("Bytes(): buffer is not alive")
 		return nil
 	}
-	fmt.Printf("Bytes(): Accessing buffer of size %d\n", ss.buffer.Size())
 	return ss.buffer.Bytes()
 }
 
 // Wipe removes the string from memory and makes it unrecoverable.
 func (ss *SecureString) Wipe() error {
-	fmt.Println("SecureString: Wipe(): Starting...")
-	fmt.Printf("Stack trace: %s\n", debug.Stack())
 
 	if ss.buffer != nil {
-		fmt.Printf("Wipe(): Buffer IsAlive: %v\n", ss.buffer.IsAlive())
 		if ss.buffer.IsAlive() {
 			ss.buffer.Destroy()
-			fmt.Println("Wipe(): Buffer destroyed")
 		}
 	} else {
-		fmt.Println("Wipe(): Buffer is nil")
+		// fmt.Println("Wipe(): Buffer is nil")
 	}
 	ss.buffer = nil
-	fmt.Println("SecureString: Wipe(): Finished")
 	return nil
 }

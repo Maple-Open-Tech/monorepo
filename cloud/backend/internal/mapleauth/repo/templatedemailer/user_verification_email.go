@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-func (impl *templatedEmailer) SendUserVerificationEmail(ctx context.Context, email, verificationCode, firstName string) error {
+func (impl *templatedEmailer) SendUserVerificationEmail(ctx context.Context, monolithModule int, email, verificationCode, firstName string) error {
 
 	return nil
 }

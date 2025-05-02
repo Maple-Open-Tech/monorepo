@@ -12,7 +12,7 @@ import (
 )
 
 type SendUserPasswordResetEmailUseCase interface {
-	Execute(ctx context.Context, user *domain.BaseUser) error
+	Execute(ctx context.Context, monolithModule int, user *domain.BaseUser) error
 }
 type sendUserPasswordResetEmailUseCaseImpl struct {
 	config  *config.Configuration
@@ -24,7 +24,7 @@ func NewSendUserPasswordResetEmailUseCase(config *config.Configuration, logger *
 	return &sendUserPasswordResetEmailUseCaseImpl{config, logger, emailer}
 }
 
-func (uc *sendUserPasswordResetEmailUseCaseImpl) Execute(ctx context.Context, user *domain.BaseUser) error {
+func (uc *sendUserPasswordResetEmailUseCaseImpl) Execute(ctx context.Context, monolithModule int, user *domain.BaseUser) error {
 	//
 	// STEP 1: Validation.
 	//
@@ -53,5 +53,5 @@ func (uc *sendUserPasswordResetEmailUseCaseImpl) Execute(ctx context.Context, us
 	// STEP 2: Send email
 	//
 
-	return uc.emailer.SendUserPasswordResetEmail(ctx, user.Email, user.PasswordResetVerificationCode, user.FirstName)
+	return uc.emailer.SendUserPasswordResetEmail(ctx, monolithModule, user.Email, user.PasswordResetVerificationCode, user.FirstName)
 }

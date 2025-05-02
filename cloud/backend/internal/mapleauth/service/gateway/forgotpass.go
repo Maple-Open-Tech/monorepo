@@ -41,6 +41,9 @@ func NewGatewayForgotPasswordService(
 
 type GatewayForgotPasswordRequestIDO struct {
 	Email string `json:"email"`
+
+	// Module refers to which module the user is reqesting this for.
+	Module int `json:"module,omitempty"`
 }
 
 type GatewayForgotPasswordResponseIDO struct {
@@ -65,6 +68,9 @@ func (s *gatewayForgotPasswordServiceImpl) Execute(sessCtx context.Context, req 
 	e := make(map[string]string)
 	if req.Email == "" {
 		e["email"] = "Email address is required"
+	}
+	if req.Module == 0 {
+		e["module"] = "Module is required"
 	}
 
 	if len(e) != 0 {
@@ -106,7 +112,7 @@ func (s *gatewayForgotPasswordServiceImpl) Execute(sessCtx context.Context, req 
 	// STEP 5: Send email
 	//
 
-	if err := s.sendUserPasswordResetEmailUseCase.Execute(sessCtx, u); err != nil {
+	if err := s.sendUserPasswordResetEmailUseCase.Execute(sessCtx, req.Module, u); err != nil {
 		// Skip any error handling...
 	}
 

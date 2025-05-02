@@ -26,11 +26,30 @@ func NewGatewaySendVerifyEmailService(
 
 type GatewaySendVerifyEmailRequestIDO struct {
 	Email string `json:"email"`
+
+	// Module refers to which module the user is registering for.
+	Module int `json:"module,omitempty"`
 }
 
 func (s *gatewaySendVerifyEmailServiceImpl) Execute(sessCtx context.Context, req *GatewaySendVerifyEmailRequestIDO) error {
 	// Extract from our session the following data.
 	// sessionID := sessCtx.Value(constants.SessionID).(string)
+	//
+	// //
+	// STEP 2: Validation of input.
+	//
+
+	e := make(map[string]string)
+	if req.Email == "" {
+		e["email"] = "Email address is required"
+	}
+	if req.Module == 0 {
+		e["module"] = "Module is required"
+	}
+
+	if len(e) != 0 {
+		return httperror.NewForBadRequest(&e)
+	}
 
 	// Lookup the user in our database, else return a `400 Bad Request` error.
 	u, err := s.userGetByEmailUseCase.Execute(sessCtx, req.Email)
@@ -41,7 +60,7 @@ func (s *gatewaySendVerifyEmailServiceImpl) Execute(sessCtx context.Context, req
 		return httperror.NewForBadRequestWithSingleField("email", "does not exist")
 	}
 
-	if err := s.sendUserVerificationEmailUseCase.Execute(context.Background(), u); err != nil {
+	if err := s.sendUserVerificationEmailUseCase.Execute(context.Background(), req.Module, u); err != nil {
 		// Skip any error handling...
 	}
 

@@ -12,7 +12,7 @@ import (
 )
 
 type SendUserVerificationEmailUseCase interface {
-	Execute(ctx context.Context, user *domain.BaseUser) error
+	Execute(ctx context.Context, monolithModule int, user *domain.BaseUser) error
 }
 type sendUserVerificationEmailUseCaseImpl struct {
 	config  *config.Configuration
@@ -24,7 +24,7 @@ func NewSendUserVerificationEmailUseCase(config *config.Configuration, logger *z
 	return &sendUserVerificationEmailUseCaseImpl{config, logger, emailer}
 }
 
-func (uc *sendUserVerificationEmailUseCaseImpl) Execute(ctx context.Context, user *domain.BaseUser) error {
+func (uc *sendUserVerificationEmailUseCaseImpl) Execute(ctx context.Context, monolithModule int, user *domain.BaseUser) error {
 	//
 	// STEP 1: Validation.
 	//
@@ -53,5 +53,5 @@ func (uc *sendUserVerificationEmailUseCaseImpl) Execute(ctx context.Context, use
 	// STEP 2: Send email
 	//
 
-	return uc.emailer.SendUserVerificationEmail(ctx, user.Email, user.EmailVerificationCode, user.FirstName)
+	return uc.emailer.SendUserVerificationEmail(ctx, monolithModule, user.Email, user.EmailVerificationCode, user.FirstName)
 }

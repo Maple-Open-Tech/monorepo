@@ -67,6 +67,9 @@ type RegisterCustomerRequestIDO struct {
 	AgreeTermsOfService                            bool   `json:"agree_terms_of_service,omitempty"`
 	AgreePromotions                                bool   `json:"agree_promotions,omitempty"`
 	AgreeToTrackingAcrossThirdPartyAppsAndServices bool   `json:"agree_to_tracking_across_third_party_apps_and_services,omitempty"`
+
+	// Module refers to which module the user is registering for.
+	Module int `json:"module,omitempty"`
 }
 
 type RegisterCustomerResponseIDO struct {
@@ -145,6 +148,10 @@ func (s *gatewayUserRegisterServiceImpl) Execute(
 	if req.AgreeTermsOfService == false {
 		e["agree_terms_of_service"] = "Agreeing to terms of service is required and you must agree to the terms before proceeding"
 	}
+	if req.Module == 0 {
+		e["module"] = "Module is required"
+	}
+
 	if len(e) != 0 {
 		return nil, httperror.NewForBadRequest(&e)
 	}
@@ -169,7 +176,7 @@ func (s *gatewayUserRegisterServiceImpl) Execute(
 	}
 
 	// Send our verification email.
-	if err := s.sendUserVerificationEmailUseCase.Execute(context.Background(), u); err != nil {
+	if err := s.sendUserVerificationEmailUseCase.Execute(context.Background(), req.Module, u); err != nil {
 		// Skip any error handling...
 	}
 

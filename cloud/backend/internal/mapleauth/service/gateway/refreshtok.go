@@ -6,8 +6,6 @@ import (
 	"errors"
 	"time"
 
-	"go.uber.org/zap"
-
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
@@ -24,19 +22,17 @@ type GatewayRefreshTokenService interface {
 }
 
 type gatewayRefreshTokenServiceImpl struct {
-	logger                *zap.Logger
 	cache                 mongodbcache.Cacher
 	jwtProvider           jwt.Provider
 	userGetByEmailUseCase uc_user.UserGetByEmailUseCase
 }
 
 func NewGatewayRefreshTokenService(
-	logger *zap.Logger,
 	cach mongodbcache.Cacher,
 	jwtp jwt.Provider,
 	uc1 uc_user.UserGetByEmailUseCase,
 ) GatewayRefreshTokenService {
-	return &gatewayRefreshTokenServiceImpl{logger, cach, jwtp, uc1}
+	return &gatewayRefreshTokenServiceImpl{cach, jwtp, uc1}
 }
 
 type GatewayRefreshTokenRequestIDO struct {
@@ -62,7 +58,6 @@ func (s *gatewayRefreshTokenServiceImpl) Execute(
 
 	sessionID, err := s.jwtProvider.ProcessJWTToken(req.Value)
 	if err != nil {
-		s.logger.Warn("process jwt refresh token does not exist", zap.String("value", req.Value))
 		err := errors.New("jwt refresh token failed")
 		return nil, err
 	}
@@ -73,14 +68,12 @@ func (s *gatewayRefreshTokenServiceImpl) Execute(
 
 	uBin, err := s.cache.Get(sessCtx, sessionID)
 	if err != nil {
-		s.logger.Error("in-memory set error", zap.Any("err", err))
 		return nil, err
 	}
 
 	var u *domain.BaseUser
 	err = json.Unmarshal(uBin, &u)
 	if err != nil {
-		s.logger.Error("unmarshal error", zap.Any("err", err))
 		return nil, err
 	}
 
@@ -97,14 +90,12 @@ func (s *gatewayRefreshTokenServiceImpl) Execute(
 
 	err = s.cache.SetWithExpiry(sessCtx, newSessionUUID, uBin, rtExpiry)
 	if err != nil {
-		s.logger.Error("cache set with expiry error", zap.Any("err", err))
 		return nil, err
 	}
 
 	// Generate our JWT token.
 	accessToken, accessTokenExpiry, refreshToken, refreshTokenExpiry, err := s.jwtProvider.GenerateJWTTokenPair(newSessionUUID, atExpiry, rtExpiry)
 	if err != nil {
-		s.logger.Error("jwt generate pairs error", zap.Any("err", err))
 		return nil, err
 	}
 

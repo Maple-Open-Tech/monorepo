@@ -3,8 +3,6 @@ package gateway
 import (
 	"context"
 
-	"go.uber.org/zap"
-
 	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser"
 	uc_emailer "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/emailer"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
@@ -15,17 +13,15 @@ type GatewaySendVerifyEmailService interface {
 }
 
 type gatewaySendVerifyEmailServiceImpl struct {
-	logger                           *zap.Logger
 	userGetByEmailUseCase            uc_user.UserGetByEmailUseCase
 	sendUserVerificationEmailUseCase uc_emailer.SendUserVerificationEmailUseCase
 }
 
 func NewGatewaySendVerifyEmailService(
-	logger *zap.Logger,
 	uc1 uc_user.UserGetByEmailUseCase,
 	uc2 uc_emailer.SendUserVerificationEmailUseCase,
 ) GatewaySendVerifyEmailService {
-	return &gatewaySendVerifyEmailServiceImpl{logger, uc1, uc2}
+	return &gatewaySendVerifyEmailServiceImpl{uc1, uc2}
 }
 
 type GatewaySendVerifyEmailRequestIDO struct {
@@ -39,16 +35,13 @@ func (s *gatewaySendVerifyEmailServiceImpl) Execute(sessCtx context.Context, req
 	// Lookup the user in our database, else return a `400 Bad Request` error.
 	u, err := s.userGetByEmailUseCase.Execute(sessCtx, req.Email)
 	if err != nil {
-		s.logger.Error("database error", zap.Any("err", err))
 		return err
 	}
 	if u == nil {
-		s.logger.Warn("user does not exist for email error")
 		return httperror.NewForBadRequestWithSingleField("email", "does not exist")
 	}
 
 	if err := s.sendUserVerificationEmailUseCase.Execute(context.Background(), u); err != nil {
-		s.logger.Error("failed sending verification email with error", zap.Any("err", err))
 		// Skip any error handling...
 	}
 

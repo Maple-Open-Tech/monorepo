@@ -7,8 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/zap"
-
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
@@ -33,7 +31,6 @@ type GatewayUserRegisterService interface {
 
 type gatewayUserRegisterServiceImpl struct {
 	config                           *config.Configuration
-	logger                           *zap.Logger
 	passwordProvider                 password.Provider
 	cache                            mongodbcache.Cacher
 	jwtProvider                      jwt.Provider
@@ -45,7 +42,6 @@ type gatewayUserRegisterServiceImpl struct {
 
 func NewGatewayUserRegisterService(
 	cfg *config.Configuration,
-	logger *zap.Logger,
 	pp password.Provider,
 	cach mongodbcache.Cacher,
 	jwtp jwt.Provider,
@@ -54,7 +50,7 @@ func NewGatewayUserRegisterService(
 	uc3 uc_user.UserUpdateUseCase,
 	uc4 uc_emailer.SendUserVerificationEmailUseCase,
 ) GatewayUserRegisterService {
-	return &gatewayUserRegisterServiceImpl{cfg, logger, pp, cach, jwtp, uc1, uc2, uc3, uc4}
+	return &gatewayUserRegisterServiceImpl{cfg, pp, cach, jwtp, uc1, uc2, uc3, uc4}
 }
 
 type RegisterCustomerRequestIDO struct {
@@ -98,10 +94,6 @@ func (s *gatewayUserRegisterServiceImpl) Execute(
 	req.Password = strings.ReplaceAll(req.Password, "\t", "")
 	req.Password = strings.TrimSpace(req.Password)
 	// password, err := sstring.NewSecureString(unsecurePassword)
-	// if err != nil {
-	// 	s.logger.Error("secure string error", zap.Any("err", err))
-	// 	return nil, err
-	// }
 
 	//
 	// STEP 2: Validation of input.
@@ -154,8 +146,6 @@ func (s *gatewayUserRegisterServiceImpl) Execute(
 		e["agree_terms_of_service"] = "Agreeing to terms of service is required and you must agree to the terms before proceeding"
 	}
 	if len(e) != 0 {
-		s.logger.Warn("Failed validation register",
-			zap.Any("error", e))
 		return nil, httperror.NewForBadRequest(&e)
 	}
 
@@ -166,24 +156,20 @@ func (s *gatewayUserRegisterServiceImpl) Execute(
 	// Lookup the baseuser in our database, else return a `400 Bad Request` error.
 	u, err := s.userGetByEmailUseCase.Execute(sessCtx, req.Email)
 	if err != nil {
-		s.logger.Error("database error", zap.Any("err", err))
 		return nil, err
 	}
 	if u != nil {
-		s.logger.Warn("baseuser already exist validation error")
 		return nil, httperror.NewForBadRequestWithSingleField("email", "Email address already exists")
 	}
 
 	// Create our baseuser.
 	u, err = s.createCustomerUserForRequest(sessCtx, req)
 	if err != nil {
-		s.logger.Error("failed creating customer baseuser error", zap.Any("err", err))
 		return nil, err
 	}
 
 	// Send our verification email.
 	if err := s.sendUserVerificationEmailUseCase.Execute(context.Background(), u); err != nil {
-		s.logger.Error("failed sending verification email with error", zap.Any("err", err))
 		// Skip any error handling...
 	}
 
@@ -193,7 +179,6 @@ func (s *gatewayUserRegisterServiceImpl) Execute(
 func (s *gatewayUserRegisterServiceImpl) registerWithUser(sessCtx context.Context, u *domain.BaseUser) (*RegisterCustomerResponseIDO, error) {
 	uBin, err := json.Marshal(u)
 	if err != nil {
-		s.logger.Error("marshalling error", zap.Any("err", err))
 		return nil, err
 	}
 
@@ -206,14 +191,12 @@ func (s *gatewayUserRegisterServiceImpl) registerWithUser(sessCtx context.Contex
 
 	err = s.cache.SetWithExpiry(sessCtx, sessionUUID, uBin, rtExpiry)
 	if err != nil {
-		s.logger.Error("cache set with expiry error", zap.Any("err", err))
 		return nil, err
 	}
 
 	// Generate our JWT token.
 	accessToken, accessTokenExpiry, refreshToken, refreshTokenExpiry, err := s.jwtProvider.GenerateJWTTokenPair(sessionUUID, atExpiry, rtExpiry)
 	if err != nil {
-		s.logger.Error("jwt generate pairs error", zap.Any("err", err))
 		return nil, err
 	}
 
@@ -231,14 +214,12 @@ func (s *gatewayUserRegisterServiceImpl) createCustomerUserForRequest(sessCtx co
 
 	password, err := sstring.NewSecureString(req.Password)
 	if err != nil {
-		s.logger.Error("password securing error", zap.Any("err", err))
 		return nil, err
 	}
 	defer password.Wipe()
 
 	passwordHash, err := s.passwordProvider.GenerateHashFromPassword(password)
 	if err != nil {
-		s.logger.Error("hashing error", zap.Any("error", err))
 		return nil, err
 	}
 
@@ -246,7 +227,6 @@ func (s *gatewayUserRegisterServiceImpl) createCustomerUserForRequest(sessCtx co
 
 	emailVerificationCode, err := random.GenerateSixDigitCode()
 	if err != nil {
-		s.logger.Error("generating email verification code error", zap.Any("error", err))
 		return nil, err
 	}
 
@@ -299,15 +279,8 @@ func (s *gatewayUserRegisterServiceImpl) createCustomerUserForRequest(sessCtx co
 	}
 	err = s.userCreateUseCase.Execute(sessCtx, u)
 	if err != nil {
-		s.logger.Error("database create error", zap.Any("error", err))
 		return nil, err
 	}
-	s.logger.Info("Customer baseuser created.",
-		zap.Any("_id", u.ID),
-		zap.String("full_name", u.Name),
-		zap.String("email", u.Email),
-		zap.String("password_hash_algorithm", u.PasswordHashAlgorithm),
-		zap.String("password_hash", u.PasswordHash))
 
 	return u, nil
 }

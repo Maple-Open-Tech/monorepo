@@ -5,23 +5,17 @@ import (
 	"net/http"
 	"strings"
 
-	"go.uber.org/zap"
-
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
 )
 
 func (mid *middleware) JWTProcessorMiddleware(fn http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		mid.logger.Debug("JWTProcessorMiddleware starting up...")
-
 		ctx := r.Context()
 
 		// Extract our auth header array.
 		reqToken := r.Header.Get("Authorization")
 
 		// For debugging purposes.
-		mid.logger.Debug("",
-			zap.Any("Authorization", reqToken))
 
 		// Before running our JWT middleware we need to confirm there is an
 		// an `Authorization` header to run our middleware. This is an important
@@ -31,7 +25,6 @@ func (mid *middleware) JWTProcessorMiddleware(fn http.HandlerFunc) http.HandlerF
 			// Special thanks to "poise" via https://stackoverflow.com/a/44700761
 			splitToken := strings.Split(reqToken, "JWT ")
 			if len(splitToken) < 2 {
-				mid.logger.Warn("not properly formatted authorization header", zap.Any("middleware", "JWTProcessorMiddleware"))
 				http.Error(w, "not properly formatted authorization header", http.StatusBadRequest)
 				return
 			}
@@ -55,7 +48,6 @@ func (mid *middleware) JWTProcessorMiddleware(fn http.HandlerFunc) http.HandlerF
 			http.Error(w, "attempting to access a protected endpoint", http.StatusUnauthorized)
 			return
 		} else {
-			mid.logger.Warn("authorization not set", zap.Any("middleware", "JWTProcessorMiddleware"))
 			http.Error(w, "attempting to access a protected endpoint", http.StatusUnauthorized)
 			return
 		}

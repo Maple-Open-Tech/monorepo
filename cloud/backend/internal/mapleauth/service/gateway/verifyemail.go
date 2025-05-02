@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"go.uber.org/zap"
-
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
 	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
 	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser"
@@ -17,17 +15,15 @@ type GatewayVerifyEmailService interface {
 }
 
 type gatewayVerifyEmailServiceImpl struct {
-	logger                           *zap.Logger
 	userGetByVerificationCodeUseCase uc_user.UserGetByVerificationCodeUseCase
 	userUpdateUseCase                uc_user.UserUpdateUseCase
 }
 
 func NewGatewayVerifyEmailService(
-	logger *zap.Logger,
 	uc1 uc_user.UserGetByVerificationCodeUseCase,
 	uc2 uc_user.UserUpdateUseCase,
 ) GatewayVerifyEmailService {
-	return &gatewayVerifyEmailServiceImpl{logger, uc1, uc2}
+	return &gatewayVerifyEmailServiceImpl{uc1, uc2}
 }
 
 type GatewayVerifyEmailRequestIDO struct {
@@ -48,11 +44,9 @@ func (s *gatewayVerifyEmailServiceImpl) Execute(sessCtx context.Context, req *Ga
 	// Lookup the user in our database, else return a `400 Bad Request` error.
 	u, err := s.userGetByVerificationCodeUseCase.Execute(sessCtx, req.Code)
 	if err != nil {
-		s.logger.Error("database error", zap.Any("err", err))
 		return nil, err
 	}
 	if u == nil {
-		s.logger.Warn("user does not exist validation error")
 		return nil, httperror.NewForBadRequestWithSingleField("code", "does not exist")
 	}
 
@@ -69,7 +63,6 @@ func (s *gatewayVerifyEmailServiceImpl) Execute(sessCtx context.Context, req *Ga
 	// ou.ModifiedByName = fmt.Sprintf("%s %s", ou.FirstName, ou.LastName)
 	u.ModifiedFromIPAddress = ipAddress
 	if err := s.userUpdateUseCase.Execute(sessCtx, u); err != nil {
-		s.logger.Error("update error", zap.Any("err", err))
 		return nil, err
 	}
 
@@ -81,13 +74,11 @@ func (s *gatewayVerifyEmailServiceImpl) Execute(sessCtx context.Context, req *Ga
 	case domain.UserRoleIndividual:
 		{
 			res.Message = "Thank you for verifying. You may log in now to get started!"
-			s.logger.Debug("customer user verified")
 			break
 		}
 	default:
 		{
 			res.Message = "Thank you for verifying. You may log in now to get started!"
-			s.logger.Debug("unknown user verified")
 			break
 		}
 	}

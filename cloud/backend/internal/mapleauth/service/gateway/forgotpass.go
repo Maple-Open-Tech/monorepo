@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/zap"
-
 	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser"
 	uc_emailer "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/emailer"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
@@ -22,7 +20,6 @@ type GatewayForgotPasswordService interface {
 }
 
 type gatewayForgotPasswordServiceImpl struct {
-	logger                            *zap.Logger
 	passwordProvider                  password.Provider
 	cache                             mongodbcache.Cacher
 	jwtProvider                       jwt.Provider
@@ -32,7 +29,6 @@ type gatewayForgotPasswordServiceImpl struct {
 }
 
 func NewGatewayForgotPasswordService(
-	logger *zap.Logger,
 	pp password.Provider,
 	cach mongodbcache.Cacher,
 	jwtp jwt.Provider,
@@ -40,7 +36,7 @@ func NewGatewayForgotPasswordService(
 	uc2 uc_user.UserUpdateUseCase,
 	uc3 uc_emailer.SendUserPasswordResetEmailUseCase,
 ) GatewayForgotPasswordService {
-	return &gatewayForgotPasswordServiceImpl{logger, pp, cach, jwtp, uc1, uc2, uc3}
+	return &gatewayForgotPasswordServiceImpl{pp, cach, jwtp, uc1, uc2, uc3}
 }
 
 type GatewayForgotPasswordRequestIDO struct {
@@ -72,8 +68,6 @@ func (s *gatewayForgotPasswordServiceImpl) Execute(sessCtx context.Context, req 
 	}
 
 	if len(e) != 0 {
-		s.logger.Warn("Failed validation login",
-			zap.Any("error", e))
 		return nil, httperror.NewForBadRequest(&e)
 	}
 
@@ -84,11 +78,9 @@ func (s *gatewayForgotPasswordServiceImpl) Execute(sessCtx context.Context, req 
 	// Lookup the baseuser in our database, else return a `400 Bad Request` error.
 	u, err := s.userGetByEmailUseCase.Execute(sessCtx, req.Email)
 	if err != nil {
-		s.logger.Error("database error", zap.Any("err", err))
 		return nil, err
 	}
 	if u == nil {
-		s.logger.Warn("baseuser does not exist validation error")
 		return nil, httperror.NewForBadRequestWithSingleField("email", "Email address does not exist")
 	}
 
@@ -98,7 +90,6 @@ func (s *gatewayForgotPasswordServiceImpl) Execute(sessCtx context.Context, req 
 
 	passwordResetVerificationCode, err := random.GenerateSixDigitCode()
 	if err != nil {
-		s.logger.Error("generating email verification code error", zap.Any("error", err))
 		return nil, err
 	}
 
@@ -108,7 +99,6 @@ func (s *gatewayForgotPasswordServiceImpl) Execute(sessCtx context.Context, req 
 	u.ModifiedByName = u.Name
 	err = s.userUpdateUseCase.Execute(sessCtx, u)
 	if err != nil {
-		s.logger.Error("database update error", zap.Any("error", err))
 		return nil, err
 	}
 
@@ -117,7 +107,6 @@ func (s *gatewayForgotPasswordServiceImpl) Execute(sessCtx context.Context, req 
 	//
 
 	if err := s.sendUserPasswordResetEmailUseCase.Execute(sessCtx, u); err != nil {
-		s.logger.Error("failed sending verification email with error", zap.Any("err", err))
 		// Skip any error handling...
 	}
 

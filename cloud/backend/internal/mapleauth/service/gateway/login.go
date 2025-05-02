@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/zap"
-
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
@@ -24,7 +22,6 @@ type GatewayLoginService interface {
 }
 
 type gatewayLoginServiceImpl struct {
-	logger                *zap.Logger
 	passwordProvider      password.Provider
 	cache                 mongodbcache.Cacher
 	jwtProvider           jwt.Provider
@@ -33,14 +30,13 @@ type gatewayLoginServiceImpl struct {
 }
 
 func NewGatewayLoginService(
-	logger *zap.Logger,
 	pp password.Provider,
 	cach mongodbcache.Cacher,
 	jwtp jwt.Provider,
 	uc1 uc_user.UserGetByEmailUseCase,
 	uc2 uc_user.UserUpdateUseCase,
 ) GatewayLoginService {
-	return &gatewayLoginServiceImpl{logger, pp, cach, jwtp, uc1, uc2}
+	return &gatewayLoginServiceImpl{pp, cach, jwtp, uc1, uc2}
 }
 
 type GatewayLoginRequestIDO struct {
@@ -83,8 +79,6 @@ func (s *gatewayLoginServiceImpl) Execute(sessCtx context.Context, req *GatewayL
 	}
 
 	if len(e) != 0 {
-		s.logger.Warn("Failed validation login",
-			zap.Any("error", e))
 		return nil, httperror.NewForBadRequest(&e)
 	}
 
@@ -95,52 +89,28 @@ func (s *gatewayLoginServiceImpl) Execute(sessCtx context.Context, req *GatewayL
 	// Lookup the baseuser in our database, else return a `400 Bad Request` error.
 	u, err := s.userGetByEmailUseCase.Execute(sessCtx, req.Email)
 	if err != nil {
-		s.logger.Error("database error",
-			zap.String("email", req.Email),
-			zap.Any("err", err))
 		return nil, err
 	}
 	if u == nil {
-		s.logger.Warn("baseuser does not exist validation error",
-			zap.String("email", req.Email))
 		return nil, httperror.NewForBadRequestWithSingleField("email", "Email address does not exist")
 	}
 
-	s.logger.Debug("attempting to confirm correct password submission for the existing baseuser...",
-		zap.String("email", req.Email))
-
 	securePassword, err := sstring.NewSecureString(req.Password)
 	if err != nil {
-		s.logger.Error("database error",
-			zap.String("email", req.Email),
-			zap.Any("err", err))
 		return nil, err
 	}
 	defer securePassword.Wipe()
 
-	s.logger.Debug("attempting to compare password hashes...",
-		zap.String("email", req.Email))
-
 	// Verify the inputted password and hashed password match.
 	passwordMatch, _ := s.passwordProvider.ComparePasswordAndHash(securePassword, u.PasswordHash)
 	if passwordMatch == false {
-		s.logger.Warn("password check validation error",
-			zap.String("email", req.Email))
 		return nil, httperror.NewForBadRequestWithSingleField("password", "Password does not match with record")
 	}
 
-	s.logger.Debug("attempting to confirm existing baseuser has a verified email address...",
-		zap.String("email", req.Email))
-
 	// Enforce the verification code of the email.
 	if u.WasEmailVerified == false {
-		s.logger.Warn("email verification validation error",
-			zap.String("email", req.Email))
-		return nil, httperror.NewForBadRequestWithSingleField("email", "Email address was not verified")
+		return nil, httperror.NewForBadRequestWithSingleField("email", "Your email address has not been verified. Please check your inbox for the verification email or use the 'Resend Verification Email' option.")
 	}
-
-	s.logger.Debug("login confirmed correct password and verified email for existing baseuser...",
-		zap.String("email", req.Email))
 
 	// // Enforce 2FA if enabled.
 	if u.OTPEnabled {
@@ -149,9 +119,6 @@ func (s *gatewayLoginServiceImpl) Execute(sessCtx context.Context, req *GatewayL
 		u.OTPValidated = false
 		u.ModifiedAt = time.Now()
 		if err := s.userUpdateUseCase.Execute(sessCtx, u); err != nil {
-			s.logger.Error("failed updating baseuser during login",
-				zap.String("email", req.Email),
-				zap.Any("err", err))
 			return nil, err
 		}
 	}
@@ -162,7 +129,6 @@ func (s *gatewayLoginServiceImpl) Execute(sessCtx context.Context, req *GatewayL
 func (s *gatewayLoginServiceImpl) loginWithUser(sessCtx context.Context, u *domain.BaseUser) (*GatewayLoginResponseIDO, error) {
 	uBin, err := json.Marshal(u)
 	if err != nil {
-		s.logger.Error("marshalling error", zap.Any("err", err))
 		return nil, err
 	}
 
@@ -175,19 +141,14 @@ func (s *gatewayLoginServiceImpl) loginWithUser(sessCtx context.Context, u *doma
 
 	err = s.cache.SetWithExpiry(sessCtx, sessionUUID, uBin, rtExpiry)
 	if err != nil {
-		s.logger.Error("cache set with expiry error", zap.Any("err", err))
 		return nil, err
 	}
 
 	// Generate our JWT token.
 	accessToken, accessTokenExpiry, refreshToken, refreshTokenExpiry, err := s.jwtProvider.GenerateJWTTokenPair(sessionUUID, atExpiry, rtExpiry)
 	if err != nil {
-		s.logger.Error("jwt generate pairs error", zap.Any("err", err))
 		return nil, err
 	}
-
-	// For debugging purposes we want to print the wallet address.
-	s.logger.Debug("login successfull")
 
 	// Return our auth keys.
 	return &GatewayLoginResponseIDO{

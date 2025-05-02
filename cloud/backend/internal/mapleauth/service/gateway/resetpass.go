@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/zap"
-
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
 	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
@@ -22,7 +20,6 @@ type GatewayResetPasswordService interface {
 }
 
 type gatewayResetPasswordServiceImpl struct {
-	logger                *zap.Logger
 	passwordProvider      password.Provider
 	cache                 mongodbcache.Cacher
 	jwtProvider           jwt.Provider
@@ -31,14 +28,13 @@ type gatewayResetPasswordServiceImpl struct {
 }
 
 func NewGatewayResetPasswordService(
-	logger *zap.Logger,
 	pp password.Provider,
 	cach mongodbcache.Cacher,
 	jwtp jwt.Provider,
 	uc1 uc_user.UserGetByEmailUseCase,
 	uc2 uc_user.UserUpdateUseCase,
 ) GatewayResetPasswordService {
-	return &gatewayResetPasswordServiceImpl{logger, pp, cach, jwtp, uc1, uc2}
+	return &gatewayResetPasswordServiceImpl{pp, cach, jwtp, uc1, uc2}
 }
 
 type GatewayResetPasswordRequestIDO struct {
@@ -88,8 +84,6 @@ func (s *gatewayResetPasswordServiceImpl) Execute(sessCtx context.Context, req *
 	}
 
 	if len(e) != 0 {
-		s.logger.Warn("Failed validation login",
-			zap.Any("error", e))
 		return nil, httperror.NewForBadRequest(&e)
 	}
 
@@ -100,11 +94,9 @@ func (s *gatewayResetPasswordServiceImpl) Execute(sessCtx context.Context, req *
 	// Lookup the user in our database, else return a `400 Bad Request` error.
 	u, err := s.userGetByEmailUseCase.Execute(sessCtx, req.Email)
 	if err != nil {
-		s.logger.Error("database error", zap.Any("err", err))
 		return nil, err
 	}
 	if u == nil {
-		s.logger.Warn("user does not exist validation error")
 		return nil, httperror.NewForBadRequestWithSingleField("email", "Email address does not exist")
 	}
 
@@ -113,12 +105,10 @@ func (s *gatewayResetPasswordServiceImpl) Execute(sessCtx context.Context, req *
 	//
 
 	if req.Code != u.PasswordResetVerificationCode {
-		s.logger.Warn("verification code is incorrect")
 		return nil, httperror.NewForBadRequestWithSingleField("code", "Verification code is incorrect")
 
 	}
 	if time.Now().After(u.PasswordResetVerificationExpiry) {
-		s.logger.Warn("verification code expired")
 		return nil, httperror.NewForBadRequestWithSingleField("code", "Verification code has expired")
 	}
 
@@ -128,14 +118,12 @@ func (s *gatewayResetPasswordServiceImpl) Execute(sessCtx context.Context, req *
 
 	password, err := sstring.NewSecureString(req.Password)
 	if err != nil {
-		s.logger.Error("password securing error", zap.Any("err", err))
 		return nil, err
 	}
 	defer password.Wipe()
 
 	passwordHash, err := s.passwordProvider.GenerateHashFromPassword(password)
 	if err != nil {
-		s.logger.Error("hashing error", zap.Any("error", err))
 		return nil, err
 	}
 
@@ -148,7 +136,6 @@ func (s *gatewayResetPasswordServiceImpl) Execute(sessCtx context.Context, req *
 	u.ModifiedFromIPAddress = ipAddress
 	err = s.userUpdateUseCase.Execute(sessCtx, u)
 	if err != nil {
-		s.logger.Error("database update error", zap.Any("error", err))
 		return nil, err
 	}
 

@@ -35,7 +35,6 @@ func NewMiddleware(
 
 // Attach function attaches to HTTP router to apply for every API call.
 func (mid *middleware) Attach(fn http.HandlerFunc) http.HandlerFunc {
-	mid.Logger.Debug("middleware executed")
 	// Attach our middleware handlers here. Please note that all our middleware
 	// will start from the bottom and proceed upwards.
 	// Ex: `RateLimitMiddleware` will be executed first and

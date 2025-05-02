@@ -19,27 +19,17 @@ var (
 func init() {
 	// Exact matches
 	exactPaths = map[string]bool{
-		"/ipe/api/v1/say-hello":               true,
-		"/ipe/api/v1/token/introspect":        true,
-		"/ipe/api/v1/profile":                 true,
-		"/ipe/api/v1/me":                      true,
-		"/ipe/api/v1/me/connect-wallet":       true,
-		"/ipe/api/v1/me/delete":               true,
-		"/ipe/api/v1/dashboard":               true,
-		"/ipe/api/v1/claim-coins":             true,
-		"/ipe/api/v1/transactions":            true,
-		"/ipe/api/v1/me/verify-profile":       true,
-		"/ipe/api/v1/public-wallets":          true,
-		"/ipe/api/v1/public-wallets-by-admin": true,
-		"/ipe/api/v1/users":                   true,
+		"/ipe/api/v1/me":        true,
+		"/ipe/api/v1/me/delete": true,
+		"/ipe/api/v1/dashboard": true,
 	}
 
 	// Pattern matches
 	patterns := []string{
-		"^/ipe/api/v1/user/[0-9]+$",                      // Regex designed for non-zero integers.
-		"^/ipe/api/v1/wallet/[0-9a-f]+$",                 // Regex designed for mongodb ids.
-		"^/ipe/api/v1/public-wallets/0x[0-9a-fA-F]{40}$", // Regex designed for ethereum addresses.
-		"^/ipe/api/v1/users/[0-9a-f]+$",                  // Regex designed for mongodb ids.
+		// "^/ipe/api/v1/user/[0-9]+$",                      // Regex designed for non-zero integers.
+		// "^/ipe/api/v1/wallet/[0-9a-f]+$",                 // Regex designed for mongodb ids.
+		// "^/ipe/api/v1/public-wallets/0x[0-9a-fA-F]{40}$", // Regex designed for ethereum addresses.
+		// "^/ipe/api/v1/users/[0-9a-f]+$",                  // Regex designed for mongodb ids.
 	}
 
 	// Precompile patterns

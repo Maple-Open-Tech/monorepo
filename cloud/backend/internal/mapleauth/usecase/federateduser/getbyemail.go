@@ -1,5 +1,5 @@
-// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser/getbyemail.go
-package baseuser
+// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/federateduser/getbyemail.go
+package federateduser
 
 import (
 	"context"
@@ -7,12 +7,12 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
-	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
+	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
 type UserGetByEmailUseCase interface {
-	Execute(ctx context.Context, email string) (*dom_user.BaseUser, error)
+	Execute(ctx context.Context, email string) (*dom_user.FederatedUser, error)
 }
 
 type userGetByEmailUseCaseImpl struct {
@@ -25,7 +25,7 @@ func NewUserGetByEmailUseCase(config *config.Configuration, logger *zap.Logger, 
 	return &userGetByEmailUseCaseImpl{config, logger, repo}
 }
 
-func (uc *userGetByEmailUseCaseImpl) Execute(ctx context.Context, email string) (*dom_user.BaseUser, error) {
+func (uc *userGetByEmailUseCaseImpl) Execute(ctx context.Context, email string) (*dom_user.FederatedUser, error) {
 	//
 	// STEP 1: Validation.
 	//

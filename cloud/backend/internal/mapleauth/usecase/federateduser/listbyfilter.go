@@ -1,5 +1,5 @@
-// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser/listbyfilter.go
-package baseuser
+// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/federateduser/listbyfilter.go
+package federateduser
 
 import (
 	"context"
@@ -7,12 +7,12 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
-	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
+	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
 type UserListByFilterUseCase interface {
-	Execute(ctx context.Context, filter *dom_user.BaseUserFilter) (*dom_user.BaseUserFilterResult, error)
+	Execute(ctx context.Context, filter *dom_user.FederatedUserFilter) (*dom_user.FederatedUserFilterResult, error)
 }
 
 type userListByFilterUseCaseImpl struct {
@@ -29,14 +29,14 @@ func NewUserListByFilterUseCase(
 	return &userListByFilterUseCaseImpl{config, logger, repo}
 }
 
-func (uc *userListByFilterUseCaseImpl) Execute(ctx context.Context, filter *dom_user.BaseUserFilter) (*dom_user.BaseUserFilterResult, error) {
+func (uc *userListByFilterUseCaseImpl) Execute(ctx context.Context, filter *dom_user.FederatedUserFilter) (*dom_user.FederatedUserFilterResult, error) {
 	//
 	// STEP 1: Validation.
 	//
 
 	e := make(map[string]string)
 	if filter == nil {
-		e["filter"] = "BaseUser filter is required"
+		e["filter"] = "FederatedUser filter is required"
 	} else {
 		// Validate limit to prevent excessive data loads
 		if filter.Limit > 1000 {

@@ -1,5 +1,5 @@
-// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser/getbyid.go
-package baseuser
+// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/federateduser/getbyid.go
+package federateduser
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
-	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
+	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 

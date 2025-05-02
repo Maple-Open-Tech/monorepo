@@ -10,9 +10,9 @@ import (
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
-	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
-	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser"
+	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
 	uc_emailer "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/emailer"
+	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/random"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/jwt"
@@ -72,11 +72,11 @@ type RegisterCustomerRequestIDO struct {
 }
 
 type RegisterCustomerResponseIDO struct {
-	BaseUser               *domain.BaseUser `json:"baseuser"`
-	AccessToken            string           `json:"access_token"`
-	AccessTokenExpiryTime  time.Time        `json:"access_token_expiry_time"`
-	RefreshToken           string           `json:"refresh_token"`
-	RefreshTokenExpiryTime time.Time        `json:"refresh_token_expiry_time"`
+	FederatedUser          *domain.FederatedUser `json:"federateduser"`
+	AccessToken            string                `json:"access_token"`
+	AccessTokenExpiryTime  time.Time             `json:"access_token_expiry_time"`
+	RefreshToken           string                `json:"refresh_token"`
+	RefreshTokenExpiryTime time.Time             `json:"refresh_token_expiry_time"`
 }
 
 func (s *gatewayUserRegisterServiceImpl) Execute(
@@ -163,7 +163,7 @@ func (s *gatewayUserRegisterServiceImpl) Execute(
 	// STEP 3:
 	//
 
-	// Lookup the baseuser in our database, else return a `400 Bad Request` error.
+	// Lookup the federateduser in our database, else return a `400 Bad Request` error.
 	u, err := s.userGetByEmailUseCase.Execute(sessCtx, req.Email)
 	if err != nil {
 		return err
@@ -172,7 +172,7 @@ func (s *gatewayUserRegisterServiceImpl) Execute(
 		return httperror.NewForBadRequestWithSingleField("email", "Email address already exists")
 	}
 
-	// Create our baseuser.
+	// Create our federateduser.
 	u, err = s.createCustomerUserForRequest(sessCtx, req)
 	if err != nil {
 		return err
@@ -185,7 +185,7 @@ func (s *gatewayUserRegisterServiceImpl) Execute(
 	return nil
 }
 
-func (s *gatewayUserRegisterServiceImpl) createCustomerUserForRequest(sessCtx context.Context, req *RegisterCustomerRequestIDO) (*domain.BaseUser, error) {
+func (s *gatewayUserRegisterServiceImpl) createCustomerUserForRequest(sessCtx context.Context, req *RegisterCustomerRequestIDO) (*domain.FederatedUser, error) {
 
 	password, err := sstring.NewSecureString(req.Password)
 	if err != nil {
@@ -206,7 +206,7 @@ func (s *gatewayUserRegisterServiceImpl) createCustomerUserForRequest(sessCtx co
 	}
 
 	userID := primitive.NewObjectID()
-	u := &domain.BaseUser{
+	u := &domain.FederatedUser{
 		ID:                    userID,
 		FirstName:             req.FirstName,
 		LastName:              req.LastName,

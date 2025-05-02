@@ -1,4 +1,4 @@
-// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/service/baseuser/service.go
+// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/service/federateduser/service.go
 package me
 
 import (
@@ -13,7 +13,7 @@ import (
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
-	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser"
+	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/federateduser"
 )
 
 type MeResponseDTO struct {
@@ -115,43 +115,43 @@ func (svc *getMeServiceImpl) Execute(sessCtx context.Context) (*MeResponseDTO, e
 
 	userID, ok := sessCtx.Value(constants.SessionUserID).(primitive.ObjectID)
 	if !ok {
-		svc.logger.Error("Failed getting local baseuser id",
+		svc.logger.Error("Failed getting local federateduser id",
 			zap.Any("error", "Not found in context: user_id"))
-		return nil, errors.New("baseuser id not found in context")
+		return nil, errors.New("federateduser id not found in context")
 	}
 
-	// Get the baseuser account (aka "Me") and if it doesn't exist then we will
+	// Get the federateduser account (aka "Me") and if it doesn't exist then we will
 	// create it immediately here and now.
-	baseuser, err := svc.userGetByIDUseCase.Execute(sessCtx, userID)
+	federateduser, err := svc.userGetByIDUseCase.Execute(sessCtx, userID)
 	if err != nil {
 		svc.logger.Error("Failed getting me", zap.Any("error", err))
 		return nil, err
 	}
-	if baseuser == nil {
-		err := fmt.Errorf("BaseUser does not exist for federated iam id: %v", userID.Hex())
+	if federateduser == nil {
+		err := fmt.Errorf("FederatedUser does not exist for federated iam id: %v", userID.Hex())
 		svc.logger.Error("Failed getting me", zap.Any("error", err))
 		return nil, err
 	}
 
 	return &MeResponseDTO{
-		ID:              baseuser.ID,
-		Email:           baseuser.Email,
-		FirstName:       baseuser.FirstName,
-		LastName:        baseuser.LastName,
-		Name:            baseuser.Name,
-		LexicalName:     baseuser.LexicalName,
-		Role:            baseuser.Role,
-		Phone:           baseuser.Phone,
-		Country:         baseuser.Country,
-		Timezone:        baseuser.Timezone,
-		Region:          baseuser.Region,
-		City:            baseuser.City,
-		PostalCode:      baseuser.PostalCode,
-		AddressLine1:    baseuser.AddressLine1,
-		AddressLine2:    baseuser.AddressLine2,
-		AgreePromotions: baseuser.AgreePromotions,
-		AgreeToTrackingAcrossThirdPartyAppsAndServices: baseuser.AgreeToTrackingAcrossThirdPartyAppsAndServices,
-		CreatedAt: baseuser.CreatedAt,
-		Status:    baseuser.Status,
+		ID:              federateduser.ID,
+		Email:           federateduser.Email,
+		FirstName:       federateduser.FirstName,
+		LastName:        federateduser.LastName,
+		Name:            federateduser.Name,
+		LexicalName:     federateduser.LexicalName,
+		Role:            federateduser.Role,
+		Phone:           federateduser.Phone,
+		Country:         federateduser.Country,
+		Timezone:        federateduser.Timezone,
+		Region:          federateduser.Region,
+		City:            federateduser.City,
+		PostalCode:      federateduser.PostalCode,
+		AddressLine1:    federateduser.AddressLine1,
+		AddressLine2:    federateduser.AddressLine2,
+		AgreePromotions: federateduser.AgreePromotions,
+		AgreeToTrackingAcrossThirdPartyAppsAndServices: federateduser.AgreeToTrackingAcrossThirdPartyAppsAndServices,
+		CreatedAt: federateduser.CreatedAt,
+		Status:    federateduser.Status,
 	}, nil
 }

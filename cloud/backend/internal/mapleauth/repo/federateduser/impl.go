@@ -1,5 +1,5 @@
-// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/repo/baseuser/impl.go
-package baseuser
+// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/repo/federateduser/impl.go
+package federateduser
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
-	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
+	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
 )
 
 type userStorerImpl struct {
@@ -22,7 +22,7 @@ type userStorerImpl struct {
 
 func NewRepository(appCfg *config.Configuration, loggerp *zap.Logger, client *mongo.Client) dom_user.Repository {
 	// ctx := context.Background()
-	uc := client.Database(appCfg.DB.MapleAuthName).Collection("base_users")
+	uc := client.Database(appCfg.DB.MapleAuthName).Collection("federated_users")
 
 	// For debugging purposes only or if you are going to recreate new indexes.
 	if err := uc.Indexes().DropAll(context.TODO()); err != nil {
@@ -76,7 +76,7 @@ func NewRepository(appCfg *config.Configuration, loggerp *zap.Logger, client *mo
 }
 
 // ListAll retrieves all users from the database
-func (impl userStorerImpl) ListAll(ctx context.Context) ([]*dom_user.BaseUser, error) {
+func (impl userStorerImpl) ListAll(ctx context.Context) ([]*dom_user.FederatedUser, error) {
 	impl.Logger.Debug("listing all users")
 
 	cursor, err := impl.Collection.Find(ctx, bson.M{})
@@ -86,7 +86,7 @@ func (impl userStorerImpl) ListAll(ctx context.Context) ([]*dom_user.BaseUser, e
 	}
 	defer cursor.Close(ctx)
 
-	var users []*dom_user.BaseUser
+	var users []*dom_user.FederatedUser
 	if err = cursor.All(ctx, &users); err != nil {
 		impl.Logger.Error("failed to decode users", zap.Any("error", err))
 		return nil, err

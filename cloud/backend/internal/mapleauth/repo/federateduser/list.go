@@ -1,5 +1,5 @@
-// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/repo/baseuser/list.go
-package baseuser
+// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/repo/federateduser/list.go
+package federateduser
 
 import (
 	"context"
@@ -10,11 +10,11 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
-	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
+	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
 )
 
 // buildCountMatchStage creates the match stage for the aggregation pipeline
-func (s *userStorerImpl) buildCountMatchStage(filter *dom_user.BaseUserFilter) bson.M {
+func (s *userStorerImpl) buildCountMatchStage(filter *dom_user.FederatedUserFilter) bson.M {
 	match := bson.M{}
 
 	if filter.Status != 0 {
@@ -66,7 +66,7 @@ func (s *userStorerImpl) buildCountMatchStage(filter *dom_user.BaseUserFilter) b
 }
 
 // hasActiveFilters checks if any filters besides tenant_id are active
-func (s *userStorerImpl) hasActiveFilters(filter *dom_user.BaseUserFilter) bool {
+func (s *userStorerImpl) hasActiveFilters(filter *dom_user.FederatedUserFilter) bool {
 	return filter.Name != nil ||
 		filter.Email != nil ||
 		filter.SearchTerm != nil ||
@@ -76,7 +76,7 @@ func (s *userStorerImpl) hasActiveFilters(filter *dom_user.BaseUserFilter) bool 
 		filter.CreatedAtEnd != nil
 }
 
-func (s *userStorerImpl) CountByFilter(ctx context.Context, filter *dom_user.BaseUserFilter) (uint64, error) {
+func (s *userStorerImpl) CountByFilter(ctx context.Context, filter *dom_user.FederatedUserFilter) (uint64, error) {
 	if filter == nil {
 		return 0, errors.New("filter cannot be nil")
 	}
@@ -123,7 +123,7 @@ func (s *userStorerImpl) CountByFilter(ctx context.Context, filter *dom_user.Bas
 	return uint64(count), nil
 }
 
-func (impl *userStorerImpl) buildMatchStage(filter *dom_user.BaseUserFilter) bson.M {
+func (impl *userStorerImpl) buildMatchStage(filter *dom_user.FederatedUserFilter) bson.M {
 	match := bson.M{}
 
 	// Handle cursor-based pagination
@@ -188,7 +188,7 @@ func (impl *userStorerImpl) buildMatchStage(filter *dom_user.BaseUserFilter) bso
 	return match
 }
 
-func (impl *userStorerImpl) ListByFilter(ctx context.Context, filter *dom_user.BaseUserFilter) (*dom_user.BaseUserFilterResult, error) {
+func (impl *userStorerImpl) ListByFilter(ctx context.Context, filter *dom_user.FederatedUserFilter) (*dom_user.FederatedUserFilterResult, error) {
 	if filter == nil {
 		return nil, errors.New("filter cannot be nil")
 	}
@@ -228,7 +228,7 @@ func (impl *userStorerImpl) ListByFilter(ctx context.Context, filter *dom_user.B
 	defer cursor.Close(ctx)
 
 	// Decode results
-	var users []*dom_user.BaseUser
+	var users []*dom_user.FederatedUser
 	if err := cursor.All(ctx, &users); err != nil {
 		return nil, err
 	}
@@ -237,8 +237,8 @@ func (impl *userStorerImpl) ListByFilter(ctx context.Context, filter *dom_user.B
 	if len(users) == 0 {
 		// For debugging purposes only.
 		impl.Logger.Debug("Empty list", zap.Any("filter", filter))
-		return &dom_user.BaseUserFilterResult{
-			Users:   make([]*dom_user.BaseUser, 0),
+		return &dom_user.FederatedUserFilterResult{
+			Users:   make([]*dom_user.FederatedUser, 0),
 			HasMore: false,
 		}, nil
 	}
@@ -260,7 +260,7 @@ func (impl *userStorerImpl) ListByFilter(ctx context.Context, filter *dom_user.B
 		// Continue without total count
 	}
 
-	return &dom_user.BaseUserFilterResult{
+	return &dom_user.FederatedUserFilterResult{
 		Users:         users,
 		HasMore:       hasMore,
 		LastID:        lastDoc.ID,

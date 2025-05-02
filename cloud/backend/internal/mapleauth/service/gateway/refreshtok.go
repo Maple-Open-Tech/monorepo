@@ -8,8 +8,8 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
-	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
-	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser"
+	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
+	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/jwt"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/storage/database/mongodbcache"
 )
@@ -63,7 +63,7 @@ func (s *gatewayRefreshTokenServiceImpl) Execute(
 	}
 
 	////
-	//// Lookup in our in-memory the baseuser record for the `sessionID` or error.
+	//// Lookup in our in-memory the federateduser record for the `sessionID` or error.
 	////
 
 	uBin, err := s.cache.Get(sessCtx, sessionID)
@@ -71,7 +71,7 @@ func (s *gatewayRefreshTokenServiceImpl) Execute(
 		return nil, err
 	}
 
-	var u *domain.BaseUser
+	var u *domain.FederatedUser
 	err = json.Unmarshal(uBin, &u)
 	if err != nil {
 		return nil, err

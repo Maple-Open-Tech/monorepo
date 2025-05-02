@@ -1,5 +1,5 @@
-// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/repo/baseuser/create.go
-package baseuser
+// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/repo/federateduser/create.go
+package federateduser
 
 import (
 	"context"
@@ -8,10 +8,10 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
-	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
+	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
 )
 
-func (impl userStorerImpl) Create(ctx context.Context, u *dom_user.BaseUser) error {
+func (impl userStorerImpl) Create(ctx context.Context, u *dom_user.FederatedUser) error {
 	// DEVELOPER NOTES:
 	// According to mongodb documentaiton:
 	//     Non-existent Databases and Collections
@@ -20,7 +20,7 @@ func (impl userStorerImpl) Create(ctx context.Context, u *dom_user.BaseUser) err
 
 	if u.ID == primitive.NilObjectID {
 		u.ID = primitive.NewObjectID()
-		impl.Logger.Warn("database insert BaseUser not included id value, created id now.", zap.Any("id", u.ID))
+		impl.Logger.Warn("database insert FederatedUser not included id value, created id now.", zap.Any("id", u.ID))
 	}
 
 	_, err := impl.Collection.InsertOne(ctx, u)

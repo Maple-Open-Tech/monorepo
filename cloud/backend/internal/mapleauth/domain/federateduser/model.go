@@ -1,5 +1,5 @@
-// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser/model.go
-package baseuser
+// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser/model.go
+package federateduser
 
 import (
 	"time"
@@ -17,7 +17,7 @@ const (
 	UserRoleIndividual = 3 // Individual user, has permissions for individual-related operations
 )
 
-type BaseUser struct {
+type FederatedUser struct {
 	ID                                             primitive.ObjectID `bson:"_id" json:"id"`
 	Email                                          string             `bson:"email" json:"email"`
 	FirstName                                      string             `bson:"first_name" json:"first_name"`
@@ -86,8 +86,8 @@ type BaseUser struct {
 	OTPBackupCodeHashAlgorithm string `bson:"otp_backup_code_hash_algorithm" json:"-"`
 }
 
-// BaseUserFilter represents the filter criteria for listing users
-type BaseUserFilter struct {
+// FederatedUserFilter represents the filter criteria for listing users
+type FederatedUserFilter struct {
 	// Basic filters
 	Name   *string `json:"name,omitempty"`
 	Email  *string `json:"email,omitempty"`
@@ -107,9 +107,9 @@ type BaseUserFilter struct {
 	SearchTerm *string `json:"search_term,omitempty"`
 }
 
-// BaseUserFilterResult represents the result of a filtered list operation
-type BaseUserFilterResult struct {
-	Users         []*BaseUser        `json:"users"`
+// FederatedUserFilterResult represents the result of a filtered list operation
+type FederatedUserFilterResult struct {
+	Users         []*FederatedUser   `json:"users"`
 	HasMore       bool               `json:"has_more"`
 	LastID        primitive.ObjectID `json:"last_id,omitempty"`
 	LastCreatedAt time.Time          `json:"last_created_at"`

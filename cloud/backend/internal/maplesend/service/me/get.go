@@ -13,6 +13,7 @@ import (
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
+	uc_federateduser "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/federateduser"
 	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/usecase/user"
 )
 
@@ -85,26 +86,29 @@ type GetMeService interface {
 }
 
 type getMeServiceImpl struct {
-	config             *config.Configuration
-	logger             *zap.Logger
-	userGetByIDUseCase uc_user.UserGetByIDUseCase
-	userCreateUseCase  uc_user.UserCreateUseCase
-	userUpdateUseCase  uc_user.UserUpdateUseCase
+	config                      *config.Configuration
+	logger                      *zap.Logger
+	federatedUserGetByIDUseCase uc_federateduser.UserGetByIDUseCase
+	userGetByIDUseCase          uc_user.UserGetByIDUseCase
+	userCreateUseCase           uc_user.UserCreateUseCase
+	userUpdateUseCase           uc_user.UserUpdateUseCase
 }
 
 func NewGetMeService(
 	config *config.Configuration,
 	logger *zap.Logger,
+	federatedUserGetByIDUseCase uc_federateduser.UserGetByIDUseCase,
 	userGetByIDUseCase uc_user.UserGetByIDUseCase,
 	userCreateUseCase uc_user.UserCreateUseCase,
 	userUpdateUseCase uc_user.UserUpdateUseCase,
 ) GetMeService {
 	return &getMeServiceImpl{
-		config:             config,
-		logger:             logger,
-		userGetByIDUseCase: userGetByIDUseCase,
-		userCreateUseCase:  userCreateUseCase,
-		userUpdateUseCase:  userUpdateUseCase,
+		config:                      config,
+		logger:                      logger,
+		federatedUserGetByIDUseCase: federatedUserGetByIDUseCase,
+		userGetByIDUseCase:          userGetByIDUseCase,
+		userCreateUseCase:           userCreateUseCase,
+		userUpdateUseCase:           userUpdateUseCase,
 	}
 }
 
@@ -124,13 +128,17 @@ func (svc *getMeServiceImpl) Execute(sessCtx context.Context) (*MeResponseDTO, e
 	// create it immediately here and now.
 	user, err := svc.userGetByIDUseCase.Execute(sessCtx, userID)
 	if err != nil {
-		svc.logger.Error("Failed getting me", zap.Any("error", err))
-		return nil, err
+		return nil, fmt.Errorf("Failed getting user from database: %v", err)
 	}
 	if user == nil {
-		err := fmt.Errorf("User does not exist for federated iam id: %v", userID.Hex())
-		svc.logger.Error("Failed getting me", zap.Any("error", err))
-		return nil, err
+		federateduser, err := svc.federatedUserGetByIDUseCase.Execute(sessCtx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("Failed getting federated user from database: %v", err)
+		}
+		if federateduser == nil {
+			return nil, fmt.Errorf("User does not exist for federated iam id: %v", userID.Hex())
+		}
+
 	}
 
 	return &MeResponseDTO{

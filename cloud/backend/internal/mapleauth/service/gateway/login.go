@@ -8,8 +8,8 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
-	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
-	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser"
+	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
+	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/jwt"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/password"
@@ -85,7 +85,7 @@ func (s *gatewayLoginServiceImpl) Execute(sessCtx context.Context, req *GatewayL
 	// STEP 3:
 	//
 
-	// Lookup the baseuser in our database, else return a `400 Bad Request` error.
+	// Lookup the federateduser in our database, else return a `400 Bad Request` error.
 	u, err := s.userGetByEmailUseCase.Execute(sessCtx, req.Email)
 	if err != nil {
 		return nil, err
@@ -114,7 +114,7 @@ func (s *gatewayLoginServiceImpl) Execute(sessCtx context.Context, req *GatewayL
 	// // Enforce 2FA if enabled.
 	if u.OTPEnabled {
 		// We need to reset the `otp_validated` status to be false to force
-		// the baseuser to use their `totp authenticator` application.
+		// the federateduser to use their `totp authenticator` application.
 		u.OTPValidated = false
 		u.ModifiedAt = time.Now()
 		if err := s.userUpdateUseCase.Execute(sessCtx, u); err != nil {
@@ -125,7 +125,7 @@ func (s *gatewayLoginServiceImpl) Execute(sessCtx context.Context, req *GatewayL
 	return s.loginWithUser(sessCtx, u)
 }
 
-func (s *gatewayLoginServiceImpl) loginWithUser(sessCtx context.Context, u *domain.BaseUser) (*GatewayLoginResponseIDO, error) {
+func (s *gatewayLoginServiceImpl) loginWithUser(sessCtx context.Context, u *domain.FederatedUser) (*GatewayLoginResponseIDO, error) {
 	uBin, err := json.Marshal(u)
 	if err != nil {
 		return nil, err

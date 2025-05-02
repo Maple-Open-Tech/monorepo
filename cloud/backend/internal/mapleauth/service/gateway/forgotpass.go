@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser"
 	uc_emailer "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/emailer"
+	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/random"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/jwt"
@@ -81,7 +81,7 @@ func (s *gatewayForgotPasswordServiceImpl) Execute(sessCtx context.Context, req 
 	// STEP 3:
 	//
 
-	// Lookup the baseuser in our database, else return a `400 Bad Request` error.
+	// Lookup the federateduser in our database, else return a `400 Bad Request` error.
 	u, err := s.userGetByEmailUseCase.Execute(sessCtx, req.Email)
 	if err != nil {
 		return nil, err

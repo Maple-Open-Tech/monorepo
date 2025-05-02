@@ -1,5 +1,5 @@
-// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/repo/baseuser/get.go
-package baseuser
+// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/repo/federateduser/get.go
+package federateduser
 
 import (
 	"context"
@@ -10,13 +10,13 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
-	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
+	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
 )
 
-func (impl userStorerImpl) GetByID(ctx context.Context, id primitive.ObjectID) (*dom_user.BaseUser, error) {
+func (impl userStorerImpl) GetByID(ctx context.Context, id primitive.ObjectID) (*dom_user.FederatedUser, error) {
 	filter := bson.M{"_id": id}
 
-	var result dom_user.BaseUser
+	var result dom_user.FederatedUser
 	err := impl.Collection.FindOne(ctx, filter).Decode(&result)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -29,10 +29,10 @@ func (impl userStorerImpl) GetByID(ctx context.Context, id primitive.ObjectID) (
 	return &result, nil
 }
 
-func (impl userStorerImpl) GetByEmail(ctx context.Context, email string) (*dom_user.BaseUser, error) {
+func (impl userStorerImpl) GetByEmail(ctx context.Context, email string) (*dom_user.FederatedUser, error) {
 	filter := bson.M{"email": email}
 
-	var result dom_user.BaseUser
+	var result dom_user.FederatedUser
 	err := impl.Collection.FindOne(ctx, filter).Decode(&result)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -45,10 +45,10 @@ func (impl userStorerImpl) GetByEmail(ctx context.Context, email string) (*dom_u
 	return &result, nil
 }
 
-func (impl userStorerImpl) GetByVerificationCode(ctx context.Context, verificationCode string) (*dom_user.BaseUser, error) {
+func (impl userStorerImpl) GetByVerificationCode(ctx context.Context, verificationCode string) (*dom_user.FederatedUser, error) {
 	filter := bson.M{"email_verification_code": verificationCode}
 
-	var result dom_user.BaseUser
+	var result dom_user.FederatedUser
 	err := impl.Collection.FindOne(ctx, filter).Decode(&result)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {

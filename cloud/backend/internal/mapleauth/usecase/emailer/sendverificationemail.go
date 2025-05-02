@@ -6,13 +6,13 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
-	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
+	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/repo/templatedemailer"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
 type SendUserVerificationEmailUseCase interface {
-	Execute(ctx context.Context, monolithModule int, user *domain.BaseUser) error
+	Execute(ctx context.Context, monolithModule int, user *domain.FederatedUser) error
 }
 type sendUserVerificationEmailUseCaseImpl struct {
 	config  *config.Configuration
@@ -24,14 +24,14 @@ func NewSendUserVerificationEmailUseCase(config *config.Configuration, logger *z
 	return &sendUserVerificationEmailUseCaseImpl{config, logger, emailer}
 }
 
-func (uc *sendUserVerificationEmailUseCaseImpl) Execute(ctx context.Context, monolithModule int, user *domain.BaseUser) error {
+func (uc *sendUserVerificationEmailUseCaseImpl) Execute(ctx context.Context, monolithModule int, user *domain.FederatedUser) error {
 	//
 	// STEP 1: Validation.
 	//
 
 	e := make(map[string]string)
 	if user == nil {
-		e["user"] = "BaseUser is missing value"
+		e["user"] = "FederatedUser is missing value"
 	} else {
 		if user.FirstName == "" {
 			e["first_name"] = "First name is required"

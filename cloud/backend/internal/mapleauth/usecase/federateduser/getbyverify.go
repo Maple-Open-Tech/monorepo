@@ -1,4 +1,4 @@
-package baseuser
+package federateduser
 
 import (
 	"context"
@@ -6,12 +6,12 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
-	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
+	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
 type UserGetByVerificationCodeUseCase interface {
-	Execute(ctx context.Context, verificationCode string) (*dom_user.BaseUser, error)
+	Execute(ctx context.Context, verificationCode string) (*dom_user.FederatedUser, error)
 }
 
 type userGetByVerificationCodeUseCaseImpl struct {
@@ -24,7 +24,7 @@ func NewUserGetByVerificationCodeUseCase(config *config.Configuration, logger *z
 	return &userGetByVerificationCodeUseCaseImpl{config, logger, repo}
 }
 
-func (uc *userGetByVerificationCodeUseCaseImpl) Execute(ctx context.Context, verificationCode string) (*dom_user.BaseUser, error) {
+func (uc *userGetByVerificationCodeUseCaseImpl) Execute(ctx context.Context, verificationCode string) (*dom_user.FederatedUser, error) {
 	//
 	// STEP 1: Validation.
 	//

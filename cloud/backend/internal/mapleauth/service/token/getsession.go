@@ -6,9 +6,9 @@ import (
 
 	"go.uber.org/zap"
 
-	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
-	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
-	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser"
+	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
+	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
+	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/jwt"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/password"
@@ -16,7 +16,7 @@ import (
 )
 
 type TokenGetSessionService interface {
-	Execute(sessCtx context.Context, sessionID string) (*dom_user.BaseUser, error)
+	Execute(sessCtx context.Context, sessionID string) (*dom_user.FederatedUser, error)
 }
 
 type tokenGetSessionServiceImpl struct {
@@ -43,14 +43,14 @@ type TokenGetSessionRequestIDO struct {
 }
 
 type TokenGetSessionResponseIDO struct {
-	BaseUser               *domain.BaseUser `json:"baseuser"`
-	AccessToken            string           `json:"access_token"`
-	AccessTokenExpiryTime  time.Time        `json:"access_token_expiry_time"`
-	RefreshToken           string           `json:"refresh_token"`
-	RefreshTokenExpiryTime time.Time        `json:"refresh_token_expiry_time"`
+	FederatedUser          *domain.FederatedUser `json:"federateduser"`
+	AccessToken            string                `json:"access_token"`
+	AccessTokenExpiryTime  time.Time             `json:"access_token_expiry_time"`
+	RefreshToken           string                `json:"refresh_token"`
+	RefreshTokenExpiryTime time.Time             `json:"refresh_token_expiry_time"`
 }
 
-func (impl *tokenGetSessionServiceImpl) Execute(ctx context.Context, sessionID string) (*dom_user.BaseUser, error) {
+func (impl *tokenGetSessionServiceImpl) Execute(ctx context.Context, sessionID string) (*dom_user.FederatedUser, error) {
 	// Lookup our user profile in the session or return 500 error.
 	user, err := impl.userGetBySessionIDUseCase.Execute(ctx, sessionID)
 	if err != nil {

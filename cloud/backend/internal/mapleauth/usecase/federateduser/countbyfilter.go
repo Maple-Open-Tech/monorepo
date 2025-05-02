@@ -1,5 +1,5 @@
-// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser/countbyfilter.go
-package baseuser
+// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/federateduser/countbyfilter.go
+package federateduser
 
 import (
 	"context"
@@ -7,12 +7,12 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
-	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
+	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
 type UserCountByFilterUseCase interface {
-	Execute(ctx context.Context, filter *dom_user.BaseUserFilter) (uint64, error)
+	Execute(ctx context.Context, filter *dom_user.FederatedUserFilter) (uint64, error)
 }
 
 type userCountByFilterUseCaseImpl struct {
@@ -29,14 +29,14 @@ func NewUserCountByFilterUseCase(
 	return &userCountByFilterUseCaseImpl{config, logger, repo}
 }
 
-func (uc *userCountByFilterUseCaseImpl) Execute(ctx context.Context, filter *dom_user.BaseUserFilter) (uint64, error) {
+func (uc *userCountByFilterUseCaseImpl) Execute(ctx context.Context, filter *dom_user.FederatedUserFilter) (uint64, error) {
 	//
 	// STEP 1: Validation.
 	//
 
 	e := make(map[string]string)
 	if filter == nil {
-		e["filter"] = "BaseUser filter is required"
+		e["filter"] = "FederatedUser filter is required"
 	}
 	if len(e) != 0 {
 		uc.logger.Warn("Failed validating user count by filter",

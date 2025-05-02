@@ -1,5 +1,5 @@
-// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser/create.go
-package baseuser
+// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/federateduser/create.go
+package federateduser
 
 import (
 	"context"
@@ -7,12 +7,12 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
-	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
+	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
 type UserCreateUseCase interface {
-	Execute(ctx context.Context, user *dom_user.BaseUser) error
+	Execute(ctx context.Context, user *dom_user.FederatedUser) error
 }
 
 type userCreateUseCaseImpl struct {
@@ -25,7 +25,7 @@ func NewUserCreateUseCase(config *config.Configuration, logger *zap.Logger, repo
 	return &userCreateUseCaseImpl{config, logger, repo}
 }
 
-func (uc *userCreateUseCaseImpl) Execute(ctx context.Context, user *dom_user.BaseUser) error {
+func (uc *userCreateUseCaseImpl) Execute(ctx context.Context, user *dom_user.FederatedUser) error {
 	//
 	// STEP 1: Validation.
 	//

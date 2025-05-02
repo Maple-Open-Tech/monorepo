@@ -11,8 +11,8 @@ import (
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
-	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
-	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser"
+	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
+	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/password"
 	sstring "github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/securestring"
@@ -76,9 +76,9 @@ func (svc *deleteMeServiceImpl) Execute(sessCtx context.Context, req *DeleteMeRe
 
 	sessionUserID, ok := sessCtx.Value(constants.SessionUserID).(primitive.ObjectID)
 	if !ok {
-		svc.logger.Error("Failed getting local baseuser id",
+		svc.logger.Error("Failed getting local federateduser id",
 			zap.Any("error", "Not found in context: user_id"))
-		return errors.New("baseuser id not found in context")
+		return errors.New("federateduser id not found in context")
 	}
 
 	// Defend against admin deleting themselves
@@ -90,16 +90,16 @@ func (svc *deleteMeServiceImpl) Execute(sessCtx context.Context, req *DeleteMeRe
 	}
 
 	//
-	// STEP 3: Get baseuser from database.
+	// STEP 3: Get federateduser from database.
 	//
 
-	baseuser, err := svc.userGetByIDUseCase.Execute(sessCtx, sessionUserID)
+	federateduser, err := svc.userGetByIDUseCase.Execute(sessCtx, sessionUserID)
 	if err != nil {
-		svc.logger.Error("Failed getting baseuser", zap.Any("error", err))
+		svc.logger.Error("Failed getting federateduser", zap.Any("error", err))
 		return err
 	}
-	if baseuser == nil {
-		errMsg := "BaseUser does not exist"
+	if federateduser == nil {
+		errMsg := "FederatedUser does not exist"
 		svc.logger.Error(errMsg, zap.Any("user_id", sessionUserID))
 		return httperror.NewForBadRequestWithSingleField("message", errMsg)
 	}
@@ -115,22 +115,22 @@ func (svc *deleteMeServiceImpl) Execute(sessCtx context.Context, req *DeleteMeRe
 	}
 	defer securePassword.Wipe()
 
-	passwordMatch, _ := svc.passwordProvider.ComparePasswordAndHash(securePassword, baseuser.PasswordHash)
+	passwordMatch, _ := svc.passwordProvider.ComparePasswordAndHash(securePassword, federateduser.PasswordHash)
 	if !passwordMatch {
 		svc.logger.Warn("Password verification failed")
 		return httperror.NewForBadRequestWithSingleField("password", "Incorrect password")
 	}
 
 	//
-	// STEP 5: Delete baseuser.
+	// STEP 5: Delete federateduser.
 	//
 
 	err = svc.userDeleteByIDUseCase.Execute(sessCtx, sessionUserID)
 	if err != nil {
-		svc.logger.Error("Failed to delete baseuser", zap.Any("error", err))
+		svc.logger.Error("Failed to delete federateduser", zap.Any("error", err))
 		return err
 	}
 
-	svc.logger.Info("BaseUser successfully deleted", zap.Any("user_id", sessionUserID))
+	svc.logger.Info("FederatedUser successfully deleted", zap.Any("user_id", sessionUserID))
 	return nil
 }

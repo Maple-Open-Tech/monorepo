@@ -1,5 +1,5 @@
-// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser/getbyid.go
-package baseuser
+// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/federateduser/getbyid.go
+package federateduser
 
 import (
 	"context"
@@ -9,12 +9,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
-	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
+	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
 type UserGetByIDUseCase interface {
-	Execute(ctx context.Context, id primitive.ObjectID) (*dom_user.BaseUser, error)
+	Execute(ctx context.Context, id primitive.ObjectID) (*dom_user.FederatedUser, error)
 }
 
 type userGetByIDUseCaseImpl struct {
@@ -27,7 +27,7 @@ func NewUserGetByIDUseCase(config *config.Configuration, logger *zap.Logger, rep
 	return &userGetByIDUseCaseImpl{config, logger, repo}
 }
 
-func (uc *userGetByIDUseCaseImpl) Execute(ctx context.Context, id primitive.ObjectID) (*dom_user.BaseUser, error) {
+func (uc *userGetByIDUseCaseImpl) Execute(ctx context.Context, id primitive.ObjectID) (*dom_user.FederatedUser, error) {
 	//
 	// STEP 1: Validation.
 	//

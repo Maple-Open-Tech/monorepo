@@ -1,5 +1,5 @@
-// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/repo/baseuser/update.go
-package baseuser
+// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/repo/federateduser/update.go
+package federateduser
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 
-	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
+	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
 )
 
 // func (impl userStorerImpl) DeleteByID(ctx context.Context, id primitive.ObjectID) error {
@@ -41,7 +41,7 @@ import (
 // 	return count >= 1, nil
 // }
 
-func (impl userStorerImpl) UpdateByID(ctx context.Context, m *dom_user.BaseUser) error {
+func (impl userStorerImpl) UpdateByID(ctx context.Context, m *dom_user.FederatedUser) error {
 	filter := bson.M{"_id": m.ID}
 
 	update := bson.M{ // DEVELOPERS NOTE: https://stackoverflow.com/a/60946010
@@ -62,7 +62,7 @@ func (impl userStorerImpl) UpdateByID(ctx context.Context, m *dom_user.BaseUser)
 }
 
 // // buildCountMatchStage creates the match stage for the aggregation pipeline
-// func (s *userStorerImpl) buildCountMatchStage(filter *dom_user.BaseUserFilter) bson.M {
+// func (s *userStorerImpl) buildCountMatchStage(filter *dom_user.FederatedUserFilter) bson.M {
 // 	match := bson.M{}
 //
 // 	if filter.Status != 0 {
@@ -90,14 +90,14 @@ func (impl userStorerImpl) UpdateByID(ctx context.Context, m *dom_user.BaseUser)
 // }
 //
 // // hasActiveFilters checks if any filters besides tenant_id are active
-// func (s *userStorerImpl) hasActiveFilters(filter *dom_user.BaseUserFilter) bool {
+// func (s *userStorerImpl) hasActiveFilters(filter *dom_user.FederatedUserFilter) bool {
 // 	return filter.Name != nil ||
 // 		filter.Status != 0 ||
 // 		filter.CreatedAtStart != nil ||
 // 		filter.CreatedAtEnd != nil
 // }
 //
-// func (s *userStorerImpl) CountByFilter(ctx context.Context, filter *dom_user.BaseUserFilter) (uint64, error) {
+// func (s *userStorerImpl) CountByFilter(ctx context.Context, filter *dom_user.FederatedUserFilter) (uint64, error) {
 // 	if filter == nil {
 // 		return 0, errors.New("filter cannot be nil")
 // 	}
@@ -144,7 +144,7 @@ func (impl userStorerImpl) UpdateByID(ctx context.Context, m *dom_user.BaseUser)
 // 	return uint64(count), nil
 // }
 //
-// func (impl userStorerImpl) buildMatchStage(filter *dom_user.BaseUserFilter) bson.M {
+// func (impl userStorerImpl) buildMatchStage(filter *dom_user.FederatedUserFilter) bson.M {
 // 	match := bson.M{}
 //
 // 	// Handle cursor-based pagination
@@ -192,7 +192,7 @@ func (impl userStorerImpl) UpdateByID(ctx context.Context, m *dom_user.BaseUser)
 // 	return match
 // }
 //
-// func (impl userStorerImpl) ListByFilter(ctx context.Context, filter *dom_user.BaseUserFilter) (*dom_user.BaseUserFilterResult, error) {
+// func (impl userStorerImpl) ListByFilter(ctx context.Context, filter *dom_user.FederatedUserFilter) (*dom_user.FederatedUserFilterResult, error) {
 // 	if filter == nil {
 // 		return nil, errors.New("filter cannot be nil")
 // 	}
@@ -232,7 +232,7 @@ func (impl userStorerImpl) UpdateByID(ctx context.Context, m *dom_user.BaseUser)
 // 	defer cursor.Close(ctx)
 //
 // 	// Decode results
-// 	var Users []*dom_user.BaseUser
+// 	var Users []*dom_user.FederatedUser
 // 	if err := cursor.All(ctx, &Users); err != nil {
 // 		return nil, err
 // 	}
@@ -241,8 +241,8 @@ func (impl userStorerImpl) UpdateByID(ctx context.Context, m *dom_user.BaseUser)
 // 	if len(Users) == 0 {
 // 		// For debugging purposes only.
 // 		// impl.Logger.Debug("Empty list", zap.Any("filter", filter))
-// 		return &dom_user.BaseUserFilterResult{
-// 			Users:   make([]*dom_user.BaseUser, 0),
+// 		return &dom_user.FederatedUserFilterResult{
+// 			Users:   make([]*dom_user.FederatedUser, 0),
 // 			HasMore: false,
 // 		}, nil
 // 	}
@@ -257,7 +257,7 @@ func (impl userStorerImpl) UpdateByID(ctx context.Context, m *dom_user.BaseUser)
 // 	// Get last document info for next page
 // 	lastDoc := Users[len(Users)-1]
 //
-// 	return &dom_user.BaseUserFilterResult{
+// 	return &dom_user.FederatedUserFilterResult{
 // 		Users:         Users,
 // 		HasMore:       hasMore,
 // 		LastID:        lastDoc.ID,

@@ -4,7 +4,7 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/repo/bannedipaddress"
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/repo/baseuser"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/repo/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/repo/templatedemailer"
 )
 
@@ -12,7 +12,7 @@ func Module() fx.Option {
 	return fx.Options(
 		fx.Provide(
 			bannedipaddress.NewRepository,
-			baseuser.NewRepository,
+			federateduser.NewRepository,
 
 			// Annotate the constructor to specify which parameter should receive the named dependency
 			fx.Annotate(

@@ -11,8 +11,8 @@ import (
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
-	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
-	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser"
+	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
+	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
@@ -60,7 +60,7 @@ type VerifyProfileRequestDTO struct {
 	OtherGradingServiceName      string `json:"other_grading_service_name,omitempty"`
 	RequestWelcomePackage        int8   `json:"request_welcome_package,omitempty"`
 
-	// Explicitly specify baseuser role if needed (overrides the baseuser's current role)
+	// Explicitly specify federateduser role if needed (overrides the federateduser's current role)
 	UserRole int8 `json:"user_role,omitempty"`
 }
 
@@ -104,34 +104,34 @@ func (s *verifyProfileServiceImpl) Execute(
 	//
 	userID, ok := sessCtx.Value(constants.SessionUserID).(primitive.ObjectID)
 	if !ok {
-		s.logger.Error("Failed getting local baseuser id",
+		s.logger.Error("Failed getting local federateduser id",
 			zap.Any("error", "Not found in context: user_id"))
-		return nil, errors.New("baseuser id not found in context")
+		return nil, errors.New("federateduser id not found in context")
 	}
 
 	//
-	// STEP 2: Retrieve baseuser from database
+	// STEP 2: Retrieve federateduser from database
 	//
-	baseuser, err := s.userGetByIDUseCase.Execute(sessCtx, userID)
+	federateduser, err := s.userGetByIDUseCase.Execute(sessCtx, userID)
 	if err != nil {
-		s.logger.Error("Failed retrieving baseuser", zap.Any("error", err))
+		s.logger.Error("Failed retrieving federateduser", zap.Any("error", err))
 		return nil, err
 	}
-	if baseuser == nil {
-		s.logger.Error("BaseUser not found", zap.Any("userID", userID))
-		return nil, httperror.NewForBadRequestWithSingleField("non_field_error", "BaseUser not found")
+	if federateduser == nil {
+		s.logger.Error("FederatedUser not found", zap.Any("userID", userID))
+		return nil, httperror.NewForBadRequestWithSingleField("non_field_error", "FederatedUser not found")
 	}
 
-	// Check if we need to override the baseuser role based on the request
+	// Check if we need to override the federateduser role based on the request
 	if req.UserRole != 0 && (req.UserRole == domain.UserRoleIndividual || req.UserRole == domain.UserRoleCompany) {
-		s.logger.Info("Setting baseuser role based on request",
-			zap.Int("original_role", int(baseuser.Role)),
+		s.logger.Info("Setting federateduser role based on request",
+			zap.Int("original_role", int(federateduser.Role)),
 			zap.Int("new_role", int(req.UserRole)))
-		baseuser.Role = req.UserRole
+		federateduser.Role = req.UserRole
 	}
 
 	//
-	// STEP 3: Validate request based on baseuser role
+	// STEP 3: Validate request based on federateduser role
 	//
 	e := make(map[string]string)
 
@@ -139,13 +139,13 @@ func (s *verifyProfileServiceImpl) Execute(
 	s.validateCommonFields(req, e)
 
 	// Role-specific validation
-	if baseuser.Role == domain.UserRoleIndividual {
+	if federateduser.Role == domain.UserRoleIndividual {
 		s.validateCustomerFields(req, e)
-	} else if baseuser.Role == domain.UserRoleCompany {
+	} else if federateduser.Role == domain.UserRoleCompany {
 		s.validateRetailerFields(req, e)
 	} else {
-		s.logger.Warn("Unrecognized baseuser role", zap.Int("role", int(baseuser.Role)))
-		e["user_role"] = "Invalid baseuser role. Must be either customer or retailer."
+		s.logger.Warn("Unrecognized federateduser role", zap.Int("role", int(federateduser.Role)))
+		e["user_role"] = "Invalid federateduser role. Must be either customer or retailer."
 	}
 
 	// Return validation errors if any
@@ -155,17 +155,17 @@ func (s *verifyProfileServiceImpl) Execute(
 	}
 
 	//
-	// STEP 4: Update baseuser profile based on role
+	// STEP 4: Update federateduser profile based on role
 	//
 
 	// Update common fields
-	s.updateCommonFields(baseuser, req)
+	s.updateCommonFields(federateduser, req)
 
 	//
-	// STEP 5: Save updated baseuser to database
+	// STEP 5: Save updated federateduser to database
 	//
-	if err := s.userUpdateUseCase.Execute(sessCtx, baseuser); err != nil {
-		s.logger.Error("Failed to update baseuser", zap.Any("error", err))
+	if err := s.userUpdateUseCase.Execute(sessCtx, federateduser); err != nil {
+		s.logger.Error("Failed to update federateduser", zap.Any("error", err))
 		return nil, err
 	}
 
@@ -173,9 +173,9 @@ func (s *verifyProfileServiceImpl) Execute(
 	// STEP 6: Generate appropriate response
 	//
 	var responseMessage string
-	if baseuser.Role == domain.UserRoleIndividual {
+	if federateduser.Role == domain.UserRoleIndividual {
 		responseMessage = "Your profile has been submitted for verification. You'll be notified once it's been reviewed."
-	} else if baseuser.Role == domain.UserRoleCompany {
+	} else if federateduser.Role == domain.UserRoleCompany {
 		responseMessage = "Your retailer profile has been submitted for verification. Our team will review your application and contact you soon."
 	} else {
 		responseMessage = "Your profile has been submitted for verification."
@@ -183,11 +183,11 @@ func (s *verifyProfileServiceImpl) Execute(
 
 	return &VerifyProfileResponseDTO{
 		Message:  responseMessage,
-		UserRole: baseuser.Role,
+		UserRole: federateduser.Role,
 	}, nil
 }
 
-// validateCommonFields validates fields common to all baseuser types
+// validateCommonFields validates fields common to all federateduser types
 func (s *verifyProfileServiceImpl) validateCommonFields(req *VerifyProfileRequestDTO, e map[string]string) {
 	if req.Country == "" {
 		e["country"] = "Country is required"
@@ -295,21 +295,21 @@ func (s *verifyProfileServiceImpl) validateRetailerFields(req *VerifyProfileRequ
 	}
 }
 
-// updateCommonFields updates common fields for all baseuser types
-func (s *verifyProfileServiceImpl) updateCommonFields(baseuser *domain.BaseUser, req *VerifyProfileRequestDTO) {
-	baseuser.Country = req.Country
-	baseuser.Region = req.Region
-	baseuser.City = req.City
-	baseuser.PostalCode = req.PostalCode
-	baseuser.AddressLine1 = req.AddressLine1
-	baseuser.AddressLine2 = req.AddressLine2
-	baseuser.HasShippingAddress = req.HasShippingAddress
-	baseuser.ShippingName = req.ShippingName
-	baseuser.ShippingPhone = req.ShippingPhone
-	baseuser.ShippingCountry = req.ShippingCountry
-	baseuser.ShippingRegion = req.ShippingRegion
-	baseuser.ShippingCity = req.ShippingCity
-	baseuser.ShippingPostalCode = req.ShippingPostalCode
-	baseuser.ShippingAddressLine1 = req.ShippingAddressLine1
-	baseuser.ShippingAddressLine2 = req.ShippingAddressLine2
+// updateCommonFields updates common fields for all federateduser types
+func (s *verifyProfileServiceImpl) updateCommonFields(federateduser *domain.FederatedUser, req *VerifyProfileRequestDTO) {
+	federateduser.Country = req.Country
+	federateduser.Region = req.Region
+	federateduser.City = req.City
+	federateduser.PostalCode = req.PostalCode
+	federateduser.AddressLine1 = req.AddressLine1
+	federateduser.AddressLine2 = req.AddressLine2
+	federateduser.HasShippingAddress = req.HasShippingAddress
+	federateduser.ShippingName = req.ShippingName
+	federateduser.ShippingPhone = req.ShippingPhone
+	federateduser.ShippingCountry = req.ShippingCountry
+	federateduser.ShippingRegion = req.ShippingRegion
+	federateduser.ShippingCity = req.ShippingCity
+	federateduser.ShippingPostalCode = req.ShippingPostalCode
+	federateduser.ShippingAddressLine1 = req.ShippingAddressLine1
+	federateduser.ShippingAddressLine2 = req.ShippingAddressLine2
 }

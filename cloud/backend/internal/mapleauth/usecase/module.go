@@ -4,8 +4,8 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/bannedipaddress"
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/emailer"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/federateduser"
 )
 
 func Module() fx.Option {
@@ -15,17 +15,17 @@ func Module() fx.Option {
 			bannedipaddress.NewBannedIPAddressListAllValuesUseCase,
 			emailer.NewSendUserPasswordResetEmailUseCase,
 			emailer.NewSendUserVerificationEmailUseCase,
-			baseuser.NewUserGetBySessionIDUseCase,
-			baseuser.NewUserCountByFilterUseCase,
-			baseuser.NewUserCreateUseCase,
-			baseuser.NewUserDeleteUserByEmailUseCase,
-			baseuser.NewUserDeleteByIDUseCase,
-			baseuser.NewUserGetByEmailUseCase,
-			baseuser.NewUserGetByIDUseCase,
-			baseuser.NewUserGetByVerificationCodeUseCase,
-			baseuser.NewUserListAllUseCase,
-			baseuser.NewUserListByFilterUseCase,
-			baseuser.NewUserUpdateUseCase,
+			federateduser.NewUserGetBySessionIDUseCase,
+			federateduser.NewUserCountByFilterUseCase,
+			federateduser.NewUserCreateUseCase,
+			federateduser.NewUserDeleteUserByEmailUseCase,
+			federateduser.NewUserDeleteByIDUseCase,
+			federateduser.NewUserGetByEmailUseCase,
+			federateduser.NewUserGetByIDUseCase,
+			federateduser.NewUserGetByVerificationCodeUseCase,
+			federateduser.NewUserListAllUseCase,
+			federateduser.NewUserListByFilterUseCase,
+			federateduser.NewUserUpdateUseCase,
 		),
 	)
 }

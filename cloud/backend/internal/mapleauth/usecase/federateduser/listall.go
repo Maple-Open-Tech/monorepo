@@ -1,4 +1,4 @@
-package baseuser
+package federateduser
 
 import (
 	"context"
@@ -6,11 +6,11 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
-	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
+	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
 )
 
 type UserListAllUseCase interface {
-	Execute(ctx context.Context) ([]*dom_user.BaseUser, error)
+	Execute(ctx context.Context) ([]*dom_user.FederatedUser, error)
 }
 
 type userListAllUseCaseImpl struct {
@@ -31,7 +31,7 @@ func NewUserListAllUseCase(
 	}
 }
 
-func (uc *userListAllUseCaseImpl) Execute(ctx context.Context) ([]*dom_user.BaseUser, error) {
+func (uc *userListAllUseCaseImpl) Execute(ctx context.Context) ([]*dom_user.FederatedUser, error) {
 	uc.logger.Debug("executing list all users use case")
 
 	users, err := uc.repo.ListAll(ctx)

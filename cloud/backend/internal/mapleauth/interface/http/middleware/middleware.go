@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	uc_bannedipaddress "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/bannedipaddress"
-	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/baseuser"
+	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/jwt"
 )
 

@@ -1,4 +1,4 @@
-package baseuser
+package federateduser
 
 import (
 	"context"
@@ -6,12 +6,12 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
-	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/baseuser"
+	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/domain/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
 type UserUpdateUseCase interface {
-	Execute(ctx context.Context, user *dom_user.BaseUser) error
+	Execute(ctx context.Context, user *dom_user.FederatedUser) error
 }
 
 type userUpdateUseCaseImpl struct {
@@ -24,7 +24,7 @@ func NewUserUpdateUseCase(config *config.Configuration, logger *zap.Logger, repo
 	return &userUpdateUseCaseImpl{config, logger, repo}
 }
 
-func (uc *userUpdateUseCaseImpl) Execute(ctx context.Context, user *dom_user.BaseUser) error {
+func (uc *userUpdateUseCaseImpl) Execute(ctx context.Context, user *dom_user.FederatedUser) error {
 	//
 	// STEP 1: Validation.
 	//

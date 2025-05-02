@@ -88,27 +88,6 @@ services:
       - "./data/db3/db:/data/db"
       - "./data/db3/configdb:/data/configdb"
 
-  mongo-express:
-    container_name: mot_backend_db_admin
-    image: mongo-express:latest
-    environment:
-      - ME_CONFIG_MONGODB_SERVER=db1
-      - ME_CONFIG_MONGODB_PORT=27017
-      - ME_CONFIG_MONGODB_URI=mongodb://db1:27017,db2:27018,db3:27019/?replicaSet=rs0
-    ports:
-      - "8001:8081" # Adjusted to work with `react-native` developer instance simulator.
-    depends_on:
-      - db1
-      - db2
-      - db3
-    links:
-      - db1
-      - db2
-      - db3
-    restart: unless-stopped
-    logging:
-      driver: "none"
-
   cache:
     # https://pimylifeup.com/redis-docker/
     container_name: mot_backend_cache

@@ -5,6 +5,7 @@ import (
 
 	"go.uber.org/fx"
 
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/ipe"
 	commonhttp "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/manifold/interface/http"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend"
@@ -16,6 +17,7 @@ func Module() fx.Option {
 		pkg.Module(),
 		commonhttp.Module(),
 		mapleauth.Module(),
+		ipe.Module(),
 		maplesend.Module(),
 		fx.Invoke(func(*http.Server) {}),
 	)

@@ -13,7 +13,12 @@ func Module() fx.Option {
 		fx.Provide(
 			bannedipaddress.NewRepository,
 			baseuser.NewRepository,
-			templatedemailer.NewTemplatedEmailer,
+
+			// Annotate the constructor to specify which parameter should receive the named dependency
+			fx.Annotate(
+				templatedemailer.NewTemplatedEmailer,
+				fx.ParamTags(`name:"income-property-evaluator-module-emailer"`, `name:"maplesend-module-emailer"`),
+			),
 		),
 	)
 }

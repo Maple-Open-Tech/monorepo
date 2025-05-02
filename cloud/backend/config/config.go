@@ -11,9 +11,10 @@ import (
 )
 
 type Configuration struct {
-	App   AppConfig
-	Cache CacheConf
-	DB    DBConfig
+	App        AppConfig
+	Cache      CacheConf
+	DB         DBConfig
+	IPEMailgun MailgunConfig
 }
 
 type CacheConf struct {
@@ -37,9 +38,20 @@ type DBConfig struct {
 	MapleSendName string
 }
 
+type MailgunConfig struct {
+	APIKey           string
+	Domain           string
+	APIBase          string
+	SenderEmail      string
+	MaintenanceEmail string
+	FrontendDomain   string
+	BackendDomain    string
+}
+
 func NewProvider() *Configuration {
 	var c Configuration
 
+	// --------- SHARED ------------
 	// --- Application section ---
 	c.App.DataDirectory = getEnv("BACKEND_APP_DATA_DIRECTORY", true)
 	c.App.Port = getEnv("BACKEND_PORT", true)
@@ -57,6 +69,16 @@ func NewProvider() *Configuration {
 
 	// --- Cache ---
 	c.Cache.URI = getEnv("BACKEND_CACHE_URI", true)
+
+	// --------- INCOME PROPERTY EVALUATOR ------------
+	// --- Mailgun ---
+	c.IPEMailgun.APIKey = getEnv("BACKEND_IPE_MAILGUN_API_KEY", true)
+	c.IPEMailgun.Domain = getEnv("BACKEND_IPE_MAILGUN_DOMAIN", true)
+	c.IPEMailgun.APIBase = getEnv("BACKEND_IPE_MAILGUN_API_BASE", true)
+	c.IPEMailgun.SenderEmail = getEnv("BACKEND_IPE_MAILGUN_SENDER_EMAIL", true)
+	c.IPEMailgun.MaintenanceEmail = getEnv("BACKEND_IPE_MAILGUN_MAINTENANCE_EMAIL", true)
+	c.IPEMailgun.FrontendDomain = getEnv("BACKEND_IPE_MAILGUN_FRONTEND_DOMAIN", true)
+	c.IPEMailgun.BackendDomain = getEnv("BACKEND_IPE_MAILGUN_BACKEND_DOMAIN", true)
 
 	return &c
 }

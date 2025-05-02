@@ -103,27 +103,21 @@ func (h *GatewayUserRegisterHTTPHandler) Execute(w http.ResponseWriter, r *http.
 
 	// Define a transaction function with a series of operations
 	transactionFunc := func(sessCtx context.Context) (any, error) {
-		resp, err := h.service.Execute(sessCtx, data)
+		err := h.service.Execute(sessCtx, data)
 		if err != nil {
 			return nil, err
 		}
-		return resp, nil
+		return nil, nil
 	}
 
 	// Start a transaction
-	result, err := session.WithTransaction(ctx, transactionFunc)
-	if err != nil {
+	_, txErr := session.WithTransaction(ctx, transactionFunc)
+	if txErr != nil {
 		h.logger.Error("session failed error",
-			zap.Any("error", err))
-		httperror.ResponseError(w, err)
+			zap.Any("error", txErr))
+		httperror.ResponseError(w, txErr)
 		return
 	}
-
-	resp := result.(*sv_gateway.RegisterCustomerResponseIDO)
 
 	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(&resp); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 }

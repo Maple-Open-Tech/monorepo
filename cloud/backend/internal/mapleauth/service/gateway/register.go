@@ -2,7 +2,6 @@ package gateway
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -26,7 +25,7 @@ type GatewayUserRegisterService interface {
 	Execute(
 		sessCtx context.Context,
 		req *RegisterCustomerRequestIDO,
-	) (*RegisterCustomerResponseIDO, error)
+	) error
 }
 
 type gatewayUserRegisterServiceImpl struct {
@@ -83,7 +82,7 @@ type RegisterCustomerResponseIDO struct {
 func (s *gatewayUserRegisterServiceImpl) Execute(
 	sessCtx context.Context,
 	req *RegisterCustomerRequestIDO,
-) (*RegisterCustomerResponseIDO, error) {
+) error {
 	//
 	// STEP 1: Sanitization of the input.
 	//
@@ -150,10 +149,14 @@ func (s *gatewayUserRegisterServiceImpl) Execute(
 	}
 	if req.Module == 0 {
 		e["module"] = "Module is required"
+	} else {
+		if req.Module != int(constants.MonolithModuleIncomePropertyEvaluator) {
+			e["module"] = "Module is invalid"
+		}
 	}
 
 	if len(e) != 0 {
-		return nil, httperror.NewForBadRequest(&e)
+		return httperror.NewForBadRequest(&e)
 	}
 
 	//
@@ -163,58 +166,23 @@ func (s *gatewayUserRegisterServiceImpl) Execute(
 	// Lookup the baseuser in our database, else return a `400 Bad Request` error.
 	u, err := s.userGetByEmailUseCase.Execute(sessCtx, req.Email)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if u != nil {
-		return nil, httperror.NewForBadRequestWithSingleField("email", "Email address already exists")
+		return httperror.NewForBadRequestWithSingleField("email", "Email address already exists")
 	}
 
 	// Create our baseuser.
 	u, err = s.createCustomerUserForRequest(sessCtx, req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// Send our verification email.
 	if err := s.sendUserVerificationEmailUseCase.Execute(context.Background(), req.Module, u); err != nil {
-		// Skip any error handling...
+		return err
 	}
 
-	return s.registerWithUser(sessCtx, u)
-}
-
-func (s *gatewayUserRegisterServiceImpl) registerWithUser(sessCtx context.Context, u *domain.BaseUser) (*RegisterCustomerResponseIDO, error) {
-	uBin, err := json.Marshal(u)
-	if err != nil {
-		return nil, err
-	}
-
-	// Set expiry duration.
-	atExpiry := 24 * time.Hour
-	rtExpiry := 14 * 24 * time.Hour
-
-	// Start our session using an access and refresh token.
-	sessionUUID := primitive.NewObjectID().Hex()
-
-	err = s.cache.SetWithExpiry(sessCtx, sessionUUID, uBin, rtExpiry)
-	if err != nil {
-		return nil, err
-	}
-
-	// Generate our JWT token.
-	accessToken, accessTokenExpiry, refreshToken, refreshTokenExpiry, err := s.jwtProvider.GenerateJWTTokenPair(sessionUUID, atExpiry, rtExpiry)
-	if err != nil {
-		return nil, err
-	}
-
-	// Return our auth keys.
-	return &RegisterCustomerResponseIDO{
-		BaseUser:               u,
-		AccessToken:            accessToken,
-		AccessTokenExpiryTime:  accessTokenExpiry,
-		RefreshToken:           refreshToken,
-		RefreshTokenExpiryTime: refreshTokenExpiry,
-	}, nil
+	return nil
 }
 
 func (s *gatewayUserRegisterServiceImpl) createCustomerUserForRequest(sessCtx context.Context, req *RegisterCustomerRequestIDO) (*domain.BaseUser, error) {

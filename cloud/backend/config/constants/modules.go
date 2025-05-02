@@ -1,5 +1,5 @@
 package constants
 
 const (
-	MonolithModuleIncomePropertyEvaluator key = iota
+	MonolithModuleIncomePropertyEvaluator key = iota + 1 // Start numbering at 1
 )

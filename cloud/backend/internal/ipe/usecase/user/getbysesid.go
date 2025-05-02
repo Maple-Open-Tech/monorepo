@@ -48,8 +48,6 @@ func (uc *userGetBySessionIDUseCaseImpl) Execute(ctx context.Context, sessionID 
 	// STEP 2:
 	//
 
-	uc.logger.Debug("iam controller initialization started...")
-
 	userBytes, err := uc.cache.Get(ctx, sessionID)
 	if err != nil {
 		return nil, err
@@ -64,8 +62,6 @@ func (uc *userGetBySessionIDUseCaseImpl) Execute(ctx context.Context, sessionID 
 		uc.logger.Error("unmarshalling failed", zap.Any("err", err))
 		return nil, err
 	}
-
-	uc.logger.Debug("iam controller initialized")
 
 	return &user, nil
 }

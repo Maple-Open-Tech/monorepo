@@ -128,7 +128,7 @@ func (svc *getMeServiceImpl) Execute(sessCtx context.Context) (*MeResponseDTO, e
 		return nil, err
 	}
 	if federateduser == nil {
-		err := fmt.Errorf("FederatedUser does not exist for federated iam id: %v", userID.Hex())
+		err := fmt.Errorf("FederatedUser does not exist for federated user id: %v", userID.Hex())
 		svc.logger.Error("Failed getting me", zap.Any("error", err))
 		return nil, err
 	}

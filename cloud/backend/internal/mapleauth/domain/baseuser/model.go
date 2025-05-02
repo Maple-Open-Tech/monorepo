@@ -15,31 +15,6 @@ const (
 	UserRoleRoot       = 1 // Root user, has all permissions
 	UserRoleCompany    = 2 // Company user, has permissions for company-related operations
 	UserRoleIndividual = 3 // Individual user, has permissions for individual-related operations
-
-	UserProfileVerificationStatusUnverified         = 1 // The user's profile has not yet been submitted for verification.
-	UserProfileVerificationStatusSubmittedForReview = 2 // The user's profile has been submitted and is awaiting review.
-	UserProfileVerificationStatusApproved           = 3 // The user's profile has been approved.
-	UserProfileVerificationStatusRejected           = 4 // The user's profile has been rejected.
-
-	// StorePendingStatus indicates this store needs to be reviewed by CPS and approved / rejected.
-	StorePendingStatus  = 1 // Store is pending review.
-	StoreActiveStatus   = 2 // Store is active and can be used.
-	StoreRejectedStatus = 3 // Store has been rejected.
-	StoreErrorStatus    = 4 // Store has encountered an error.
-	StoreArchivedStatus = 5 // Store has been archived.
-
-	EstimatedSubmissionsPerMonth1To10   = 1 // Estimated submissions per month: 1 to 10
-	EstimatedSubmissionsPerMonth10To25  = 2 // Estimated submissions per month: 10 to 25
-	EstimatedSubmissionsPerMonth25To50  = 3 // Estimated submissions per month: 25 to 50
-	EstimatedSubmissionsPerMonth50To10  = 4 // Estimated submissions per month: 50 to 100
-	EstimatedSubmissionsPerMonth100Plus = 5 // Estimated submissions per month: 100+
-
-	HasOtherGradingServiceYes = 1 // Has other grading service: Yes
-	HasOtherGradingServiceNo  = 2 // Has other grading service: No
-	RequestWelcomePackageYes  = 1 // Request welcome package: Yes
-	RequestWelcomePackageNo   = 2 // Request welcome package: No
-
-	SpecialCollection040001 = 1
 )
 
 type BaseUser struct {
@@ -81,11 +56,11 @@ type BaseUser struct {
 
 	CreatedFromIPAddress  string             `bson:"created_from_ip_address" json:"created_from_ip_address"`
 	CreatedByUserID       primitive.ObjectID `bson:"created_by_user_id" json:"created_by_user_id"`
-	CreatedAt             time.Time          `bson:"created_at" json:"created_at,omitempty"`
+	CreatedAt             time.Time          `bson:"created_at" json:"created_at"`
 	CreatedByName         string             `bson:"created_by_name" json:"created_by_name"`
 	ModifiedFromIPAddress string             `bson:"modified_from_ip_address" json:"modified_from_ip_address"`
 	ModifiedByUserID      primitive.ObjectID `bson:"modified_by_user_id" json:"modified_by_user_id"`
-	ModifiedAt            time.Time          `bson:"modified_at" json:"modified_at,omitempty"`
+	ModifiedAt            time.Time          `bson:"modified_at" json:"modified_at"`
 	ModifiedByName        string             `bson:"modified_by_name" json:"modified_by_name"`
 
 	// OTPEnabled controls whether we force 2FA or not during login.

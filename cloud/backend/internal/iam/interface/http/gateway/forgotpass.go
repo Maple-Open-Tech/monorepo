@@ -11,8 +11,8 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.uber.org/zap"
 
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/middleware"
-	sv_gateway "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/service/gateway"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/interface/http/middleware"
+	sv_gateway "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/service/gateway"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
@@ -38,7 +38,7 @@ func NewGatewayForgotPasswordHTTPHandler(
 }
 
 func (*GatewayForgotPasswordHTTPHandler) Pattern() string {
-	return "POST /maplesend/api/v1/forgot-password"
+	return "POST /iam/api/v1/forgot-password"
 }
 
 func (r *GatewayForgotPasswordHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {

@@ -57,7 +57,7 @@ func (h *GatewayResetPasswordHTTPHandler) unmarshalLoginRequest(
 	defer r.Body.Close()
 
 	h.logger.Debug("beginning to decode json payload for api request ...",
-		zap.String("api", "/mapleauth/api/v1/reset-password"))
+		zap.String("api", "/iam/api/v1/reset-password"))
 
 	var rawJSON bytes.Buffer
 	teeReader := io.TeeReader(r.Body, &rawJSON) // TeeReader allows you to read the JSON and capture it
@@ -74,7 +74,7 @@ func (h *GatewayResetPasswordHTTPHandler) unmarshalLoginRequest(
 	}
 
 	h.logger.Debug("successfully decoded json payload api request",
-		zap.String("api", "/mapleauth/api/v1/reset-password"))
+		zap.String("api", "/iam/api/v1/reset-password"))
 
 	return &requestData, nil
 }

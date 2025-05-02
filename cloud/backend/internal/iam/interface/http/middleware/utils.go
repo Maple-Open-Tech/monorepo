@@ -1,4 +1,4 @@
-// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/ipe/interface/http/middleware/utils.go
+// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/interface/http/middleware/utils.go
 package middleware
 
 import (
@@ -19,18 +19,12 @@ var (
 func init() {
 	// Exact matches
 	exactPaths = map[string]bool{
-		"/ipe/api/v1/me":        true,
-		"/ipe/api/v1/me/delete": true,
-		"/ipe/api/v1/dashboard": true,
+		// "/iam/api/v1/reset-password":      true,
+		// "/iam/api/v1/token/refresh": true, // This is counterintuitive to the token refresh api endpoint
 	}
 
 	// Pattern matches
-	patterns := []string{
-		// "^/ipe/api/v1/user/[0-9]+$",                      // Regex designed for non-zero integers.
-		// "^/ipe/api/v1/wallet/[0-9a-f]+$",                 // Regex designed for mongodb ids.
-		// "^/ipe/api/v1/public-wallets/0x[0-9a-fA-F]{40}$", // Regex designed for ethereum addresses.
-		// "^/ipe/api/v1/users/[0-9a-f]+$",                  // Regex designed for mongodb ids.
-	}
+	patterns := []string{}
 
 	// Precompile patterns
 	patternRoutes = make([]protectedRoute, len(patterns))

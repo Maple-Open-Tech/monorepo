@@ -6,30 +6,32 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	_ "time/tzdata"
 
-	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.uber.org/zap"
 
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/middleware"
-	sv_gateway "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/service/gateway"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/interface/http/middleware"
+	sv_gateway "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/service/gateway"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
-type GatewayForgotPasswordHTTPHandler struct {
+type GatewayLoginHTTPHandler struct {
 	logger     *zap.Logger
 	dbClient   *mongo.Client
-	service    sv_gateway.GatewayForgotPasswordService
+	service    sv_gateway.GatewayLoginService
 	middleware middleware.Middleware
 }
 
-func NewGatewayForgotPasswordHTTPHandler(
+func NewGatewayLoginHTTPHandler(
 	logger *zap.Logger,
 	dbClient *mongo.Client,
-	service sv_gateway.GatewayForgotPasswordService,
+	service sv_gateway.GatewayLoginService,
 	middleware middleware.Middleware,
-) *GatewayForgotPasswordHTTPHandler {
-	return &GatewayForgotPasswordHTTPHandler{
+) *GatewayLoginHTTPHandler {
+	return &GatewayLoginHTTPHandler{
 		logger:     logger,
 		dbClient:   dbClient,
 		service:    service,
@@ -37,25 +39,25 @@ func NewGatewayForgotPasswordHTTPHandler(
 	}
 }
 
-func (*GatewayForgotPasswordHTTPHandler) Pattern() string {
-	return "POST /maplesend/api/v1/forgot-password"
+func (*GatewayLoginHTTPHandler) Pattern() string {
+	return "POST /iam/api/v1/login"
 }
 
-func (r *GatewayForgotPasswordHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (r *GatewayLoginHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Apply MaplesSend middleware before handling the request
 	r.middleware.Attach(r.Execute)(w, req)
 }
 
-func (h *GatewayForgotPasswordHTTPHandler) unmarshalLoginRequest(
+func (h *GatewayLoginHTTPHandler) unmarshalLoginRequest(
 	ctx context.Context,
 	r *http.Request,
-) (*sv_gateway.GatewayForgotPasswordRequestIDO, error) {
+) (*sv_gateway.GatewayLoginRequestIDO, error) {
 	// Initialize our array which will store all the results from the remote server.
-	var requestData sv_gateway.GatewayForgotPasswordRequestIDO
+	var requestData sv_gateway.GatewayLoginRequestIDO
 
 	defer r.Body.Close()
 
-	h.logger.Debug("beginning to decode json payload for api request ...", zap.String("api", "/iam/api/v1/forgot-password"))
+	h.logger.Debug("beginning to decode json payload for api request ...", zap.String("api", "/iam/api/v1/login"))
 
 	var rawJSON bytes.Buffer
 	teeReader := io.TeeReader(r.Body, &rawJSON) // TeeReader allows you to read the JSON and capture it
@@ -71,12 +73,16 @@ func (h *GatewayForgotPasswordHTTPHandler) unmarshalLoginRequest(
 		return nil, httperror.NewForSingleField(http.StatusBadRequest, "non_field_error", "payload structure is wrong")
 	}
 
-	h.logger.Debug("successfully decoded json payload api request", zap.String("api", "/iam/api/v1/forgot-password"))
+	// Defensive Code: For security purposes we need to remove all whitespaces from the email and lower the characters.
+	requestData.Email = strings.ToLower(requestData.Email)
+	requestData.Email = strings.ReplaceAll(requestData.Email, " ", "")
+
+	h.logger.Debug("successfully decoded json payload api request", zap.String("api", "/iam/api/v1/login"))
 
 	return &requestData, nil
 }
 
-func (h *GatewayForgotPasswordHTTPHandler) Execute(w http.ResponseWriter, r *http.Request) {
+func (h *GatewayLoginHTTPHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	data, err := h.unmarshalLoginRequest(ctx, r)
@@ -119,7 +125,7 @@ func (h *GatewayForgotPasswordHTTPHandler) Execute(w http.ResponseWriter, r *htt
 		return
 	}
 
-	resp := result.(*sv_gateway.GatewayForgotPasswordResponseIDO)
+	resp := result.(*sv_gateway.GatewayLoginResponseIDO)
 
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(&resp); err != nil {

@@ -6,30 +6,31 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	_ "time/tzdata"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.uber.org/zap"
 
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/middleware"
-	sv_gateway "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/service/gateway"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/interface/http/middleware"
+	sv_gateway "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/service/gateway"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
-type GatewayForgotPasswordHTTPHandler struct {
+type GatewayVerifyEmailHTTPHandler struct {
 	logger     *zap.Logger
 	dbClient   *mongo.Client
-	service    sv_gateway.GatewayForgotPasswordService
+	service    sv_gateway.GatewayVerifyEmailService
 	middleware middleware.Middleware
 }
 
-func NewGatewayForgotPasswordHTTPHandler(
+func NewGatewayVerifyEmailHTTPHandler(
 	logger *zap.Logger,
 	dbClient *mongo.Client,
-	service sv_gateway.GatewayForgotPasswordService,
+	service sv_gateway.GatewayVerifyEmailService,
 	middleware middleware.Middleware,
-) *GatewayForgotPasswordHTTPHandler {
-	return &GatewayForgotPasswordHTTPHandler{
+) *GatewayVerifyEmailHTTPHandler {
+	return &GatewayVerifyEmailHTTPHandler{
 		logger:     logger,
 		dbClient:   dbClient,
 		service:    service,
@@ -37,25 +38,23 @@ func NewGatewayForgotPasswordHTTPHandler(
 	}
 }
 
-func (*GatewayForgotPasswordHTTPHandler) Pattern() string {
-	return "POST /maplesend/api/v1/forgot-password"
+func (*GatewayVerifyEmailHTTPHandler) Pattern() string {
+	return "POST /iam/api/v1/verify-email-code"
 }
 
-func (r *GatewayForgotPasswordHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (r *GatewayVerifyEmailHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Apply MaplesSend middleware before handling the request
 	r.middleware.Attach(r.Execute)(w, req)
 }
 
-func (h *GatewayForgotPasswordHTTPHandler) unmarshalLoginRequest(
+func (h *GatewayVerifyEmailHTTPHandler) unmarshalVerifyRequest(
 	ctx context.Context,
 	r *http.Request,
-) (*sv_gateway.GatewayForgotPasswordRequestIDO, error) {
+) (*sv_gateway.GatewayVerifyEmailRequestIDO, error) {
 	// Initialize our array which will store all the results from the remote server.
-	var requestData sv_gateway.GatewayForgotPasswordRequestIDO
+	var requestData sv_gateway.GatewayVerifyEmailRequestIDO
 
 	defer r.Body.Close()
-
-	h.logger.Debug("beginning to decode json payload for api request ...", zap.String("api", "/iam/api/v1/forgot-password"))
 
 	var rawJSON bytes.Buffer
 	teeReader := io.TeeReader(r.Body, &rawJSON) // TeeReader allows you to read the JSON and capture it
@@ -71,15 +70,16 @@ func (h *GatewayForgotPasswordHTTPHandler) unmarshalLoginRequest(
 		return nil, httperror.NewForSingleField(http.StatusBadRequest, "non_field_error", "payload structure is wrong")
 	}
 
-	h.logger.Debug("successfully decoded json payload api request", zap.String("api", "/iam/api/v1/forgot-password"))
+	// Defensive Code: For security purposes we need to remove all whitespaces from the email and lower the characters.
+	requestData.Code = strings.ReplaceAll(requestData.Code, " ", "")
 
 	return &requestData, nil
 }
 
-func (h *GatewayForgotPasswordHTTPHandler) Execute(w http.ResponseWriter, r *http.Request) {
+func (h *GatewayVerifyEmailHTTPHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	data, err := h.unmarshalLoginRequest(ctx, r)
+	data, err := h.unmarshalVerifyRequest(ctx, r)
 	if err != nil {
 		httperror.ResponseError(w, err)
 		return
@@ -102,9 +102,6 @@ func (h *GatewayForgotPasswordHTTPHandler) Execute(w http.ResponseWriter, r *htt
 	transactionFunc := func(sessCtx context.Context) (interface{}, error) {
 		resp, err := h.service.Execute(sessCtx, data)
 		if err != nil {
-			h.logger.Error("service error",
-				zap.Any("err", err),
-			)
 			return nil, err
 		}
 		return resp, nil
@@ -119,7 +116,7 @@ func (h *GatewayForgotPasswordHTTPHandler) Execute(w http.ResponseWriter, r *htt
 		return
 	}
 
-	resp := result.(*sv_gateway.GatewayForgotPasswordResponseIDO)
+	resp := result.(*sv_gateway.GatwayVerifyEmailResponseIDO)
 
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(&resp); err != nil {

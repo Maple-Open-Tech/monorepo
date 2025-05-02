@@ -13,7 +13,7 @@ import (
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
-	uc_federateduser "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/mapleauth/usecase/federateduser"
+	uc_federateduser "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/usecase/federateduser"
 	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/usecase/user"
 )
 

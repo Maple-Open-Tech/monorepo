@@ -1,3 +1,4 @@
+// github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/interface/http/gateway/register.go
 package gateway
 
 import (
@@ -6,30 +7,32 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	_ "time/tzdata"
 
-	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.uber.org/zap"
 
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/interface/http/middleware"
-	sv_gateway "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/maplesend/service/gateway"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/interface/http/middleware"
+	sv_gateway "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/service/gateway"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
-type GatewayForgotPasswordHTTPHandler struct {
+type GatewayUserRegisterHTTPHandler struct {
 	logger     *zap.Logger
 	dbClient   *mongo.Client
-	service    sv_gateway.GatewayForgotPasswordService
+	service    sv_gateway.GatewayUserRegisterService
 	middleware middleware.Middleware
 }
 
-func NewGatewayForgotPasswordHTTPHandler(
+func NewGatewayUserRegisterHTTPHandler(
 	logger *zap.Logger,
 	dbClient *mongo.Client,
-	service sv_gateway.GatewayForgotPasswordService,
+	service sv_gateway.GatewayUserRegisterService,
 	middleware middleware.Middleware,
-) *GatewayForgotPasswordHTTPHandler {
-	return &GatewayForgotPasswordHTTPHandler{
+) *GatewayUserRegisterHTTPHandler {
+	return &GatewayUserRegisterHTTPHandler{
 		logger:     logger,
 		dbClient:   dbClient,
 		service:    service,
@@ -37,25 +40,23 @@ func NewGatewayForgotPasswordHTTPHandler(
 	}
 }
 
-func (*GatewayForgotPasswordHTTPHandler) Pattern() string {
-	return "POST /maplesend/api/v1/forgot-password"
+func (*GatewayUserRegisterHTTPHandler) Pattern() string {
+	return "POST /iam/api/v1/register"
 }
 
-func (r *GatewayForgotPasswordHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (r *GatewayUserRegisterHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Apply MaplesSend middleware before handling the request
 	r.middleware.Attach(r.Execute)(w, req)
 }
 
-func (h *GatewayForgotPasswordHTTPHandler) unmarshalLoginRequest(
+func (h *GatewayUserRegisterHTTPHandler) unmarshalRegisterCustomerRequest(
 	ctx context.Context,
 	r *http.Request,
-) (*sv_gateway.GatewayForgotPasswordRequestIDO, error) {
+) (*sv_gateway.RegisterCustomerRequestIDO, error) {
 	// Initialize our array which will store all the results from the remote server.
-	var requestData sv_gateway.GatewayForgotPasswordRequestIDO
+	var requestData sv_gateway.RegisterCustomerRequestIDO
 
 	defer r.Body.Close()
-
-	h.logger.Debug("beginning to decode json payload for api request ...", zap.String("api", "/iam/api/v1/forgot-password"))
 
 	var rawJSON bytes.Buffer
 	teeReader := io.TeeReader(r.Body, &rawJSON) // TeeReader allows you to read the JSON and capture it
@@ -71,15 +72,17 @@ func (h *GatewayForgotPasswordHTTPHandler) unmarshalLoginRequest(
 		return nil, httperror.NewForSingleField(http.StatusBadRequest, "non_field_error", "payload structure is wrong")
 	}
 
-	h.logger.Debug("successfully decoded json payload api request", zap.String("api", "/iam/api/v1/forgot-password"))
+	// Defensive Code: For security purposes we need to remove all whitespaces from the email and lower the characters.
+	requestData.Email = strings.ToLower(requestData.Email)
+	requestData.Email = strings.ReplaceAll(requestData.Email, " ", "")
 
 	return &requestData, nil
 }
 
-func (h *GatewayForgotPasswordHTTPHandler) Execute(w http.ResponseWriter, r *http.Request) {
+func (h *GatewayUserRegisterHTTPHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	data, err := h.unmarshalLoginRequest(ctx, r)
+	data, err := h.unmarshalRegisterCustomerRequest(ctx, r)
 	if err != nil {
 		httperror.ResponseError(w, err)
 		return
@@ -99,31 +102,22 @@ func (h *GatewayForgotPasswordHTTPHandler) Execute(w http.ResponseWriter, r *htt
 	defer session.EndSession(ctx)
 
 	// Define a transaction function with a series of operations
-	transactionFunc := func(sessCtx context.Context) (interface{}, error) {
-		resp, err := h.service.Execute(sessCtx, data)
+	transactionFunc := func(sessCtx context.Context) (any, error) {
+		err := h.service.Execute(sessCtx, data)
 		if err != nil {
-			h.logger.Error("service error",
-				zap.Any("err", err),
-			)
 			return nil, err
 		}
-		return resp, nil
+		return nil, nil
 	}
 
 	// Start a transaction
-	result, err := session.WithTransaction(ctx, transactionFunc)
-	if err != nil {
+	_, txErr := session.WithTransaction(ctx, transactionFunc)
+	if txErr != nil {
 		h.logger.Error("session failed error",
-			zap.Any("error", err))
-		httperror.ResponseError(w, err)
+			zap.Any("error", txErr))
+		httperror.ResponseError(w, txErr)
 		return
 	}
-
-	resp := result.(*sv_gateway.GatewayForgotPasswordResponseIDO)
 
 	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(&resp); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 }

@@ -23,16 +23,16 @@ type gatewayResetPasswordServiceImpl struct {
 	passwordProvider      password.Provider
 	cache                 mongodbcache.Cacher
 	jwtProvider           jwt.Provider
-	userGetByEmailUseCase uc_user.UserGetByEmailUseCase
-	userUpdateUseCase     uc_user.UserUpdateUseCase
+	userGetByEmailUseCase uc_user.FederatedUserGetByEmailUseCase
+	userUpdateUseCase     uc_user.FederatedUserUpdateUseCase
 }
 
 func NewGatewayResetPasswordService(
 	pp password.Provider,
 	cach mongodbcache.Cacher,
 	jwtp jwt.Provider,
-	uc1 uc_user.UserGetByEmailUseCase,
-	uc2 uc_user.UserUpdateUseCase,
+	uc1 uc_user.FederatedUserGetByEmailUseCase,
+	uc2 uc_user.FederatedUserUpdateUseCase,
 ) GatewayResetPasswordService {
 	return &gatewayResetPasswordServiceImpl{pp, cach, jwtp, uc1, uc2}
 }

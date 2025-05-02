@@ -9,7 +9,7 @@ import (
 	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/domain/federateduser"
 )
 
-type UserListAllUseCase interface {
+type FederatedUserListAllUseCase interface {
 	Execute(ctx context.Context) ([]*dom_user.FederatedUser, error)
 }
 
@@ -19,11 +19,11 @@ type userListAllUseCaseImpl struct {
 	repo   dom_user.Repository
 }
 
-func NewUserListAllUseCase(
+func NewFederatedUserListAllUseCase(
 	config *config.Configuration,
 	logger *zap.Logger,
 	repo dom_user.Repository,
-) UserListAllUseCase {
+) FederatedUserListAllUseCase {
 	return &userListAllUseCaseImpl{
 		config: config,
 		logger: logger,

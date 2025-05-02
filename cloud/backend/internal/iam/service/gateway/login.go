@@ -25,16 +25,16 @@ type gatewayLoginServiceImpl struct {
 	passwordProvider      password.Provider
 	cache                 mongodbcache.Cacher
 	jwtProvider           jwt.Provider
-	userGetByEmailUseCase uc_user.UserGetByEmailUseCase
-	userUpdateUseCase     uc_user.UserUpdateUseCase
+	userGetByEmailUseCase uc_user.FederatedUserGetByEmailUseCase
+	userUpdateUseCase     uc_user.FederatedUserUpdateUseCase
 }
 
 func NewGatewayLoginService(
 	pp password.Provider,
 	cach mongodbcache.Cacher,
 	jwtp jwt.Provider,
-	uc1 uc_user.UserGetByEmailUseCase,
-	uc2 uc_user.UserUpdateUseCase,
+	uc1 uc_user.FederatedUserGetByEmailUseCase,
+	uc2 uc_user.FederatedUserUpdateUseCase,
 ) GatewayLoginService {
 	return &gatewayLoginServiceImpl{pp, cach, jwtp, uc1, uc2}
 }
@@ -122,10 +122,10 @@ func (s *gatewayLoginServiceImpl) Execute(sessCtx context.Context, req *GatewayL
 		}
 	}
 
-	return s.loginWithUser(sessCtx, u)
+	return s.loginWithFederatedUser(sessCtx, u)
 }
 
-func (s *gatewayLoginServiceImpl) loginWithUser(sessCtx context.Context, u *domain.FederatedUser) (*GatewayLoginResponseIDO, error) {
+func (s *gatewayLoginServiceImpl) loginWithFederatedUser(sessCtx context.Context, u *domain.FederatedUser) (*GatewayLoginResponseIDO, error) {
 	uBin, err := json.Marshal(u)
 	if err != nil {
 		return nil, err

@@ -8,13 +8,13 @@ import (
 )
 
 const (
-	UserStatusActive   = 1   // User is active and can log in.
-	UserStatusLocked   = 50  // User account is locked, typically due to too many failed login attempts.
-	UserStatusArchived = 100 // User account is archived and cannot log in.
+	FederatedUserStatusActive   = 1   // User is active and can log in.
+	FederatedUserStatusLocked   = 50  // User account is locked, typically due to too many failed login attempts.
+	FederatedUserStatusArchived = 100 // User account is archived and cannot log in.
 
-	UserRoleRoot       = 1 // Root user, has all permissions
-	UserRoleCompany    = 2 // Company user, has permissions for company-related operations
-	UserRoleIndividual = 3 // Individual user, has permissions for individual-related operations
+	FederatedUserRoleRoot       = 1 // Root user, has all permissions
+	FederatedUserRoleCompany    = 2 // Company user, has permissions for company-related operations
+	FederatedUserRoleIndividual = 3 // Individual user, has permissions for individual-related operations
 )
 
 type FederatedUser struct {

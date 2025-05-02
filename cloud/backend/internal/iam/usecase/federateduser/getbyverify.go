@@ -10,7 +10,7 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
-type UserGetByVerificationCodeUseCase interface {
+type FederatedUserGetByVerificationCodeUseCase interface {
 	Execute(ctx context.Context, verificationCode string) (*dom_user.FederatedUser, error)
 }
 
@@ -20,7 +20,7 @@ type userGetByVerificationCodeUseCaseImpl struct {
 	repo   dom_user.Repository
 }
 
-func NewUserGetByVerificationCodeUseCase(config *config.Configuration, logger *zap.Logger, repo dom_user.Repository) UserGetByVerificationCodeUseCase {
+func NewFederatedUserGetByVerificationCodeUseCase(config *config.Configuration, logger *zap.Logger, repo dom_user.Repository) FederatedUserGetByVerificationCodeUseCase {
 	return &userGetByVerificationCodeUseCaseImpl{config, logger, repo}
 }
 

@@ -61,13 +61,13 @@ type VerifyProfileRequestDTO struct {
 	RequestWelcomePackage        int8   `json:"request_welcome_package,omitempty"`
 
 	// Explicitly specify federateduser role if needed (overrides the federateduser's current role)
-	UserRole int8 `json:"user_role,omitempty"`
+	FederatedUserRole int8 `json:"user_role,omitempty"`
 }
 
 type VerifyProfileResponseDTO struct {
-	Message  string `json:"message"`
-	UserRole int8   `json:"user_role"`
-	Status   int8   `json:"profile_verification_status"`
+	Message           string `json:"message"`
+	FederatedUserRole int8   `json:"user_role"`
+	Status            int8   `json:"profile_verification_status"`
 }
 
 type VerifyProfileService interface {
@@ -77,15 +77,15 @@ type VerifyProfileService interface {
 type verifyProfileServiceImpl struct {
 	config             *config.Configuration
 	logger             *zap.Logger
-	userGetByIDUseCase uc_user.UserGetByIDUseCase
-	userUpdateUseCase  uc_user.UserUpdateUseCase
+	userGetByIDUseCase uc_user.FederatedUserGetByIDUseCase
+	userUpdateUseCase  uc_user.FederatedUserUpdateUseCase
 }
 
 func NewVerifyProfileService(
 	config *config.Configuration,
 	logger *zap.Logger,
-	userGetByIDUseCase uc_user.UserGetByIDUseCase,
-	userUpdateUseCase uc_user.UserUpdateUseCase,
+	userGetByIDUseCase uc_user.FederatedUserGetByIDUseCase,
+	userUpdateUseCase uc_user.FederatedUserUpdateUseCase,
 ) VerifyProfileService {
 	return &verifyProfileServiceImpl{
 		config:             config,
@@ -102,7 +102,7 @@ func (s *verifyProfileServiceImpl) Execute(
 	//
 	// STEP 1: Get required from context.
 	//
-	userID, ok := sessCtx.Value(constants.SessionUserID).(primitive.ObjectID)
+	userID, ok := sessCtx.Value(constants.SessionFederatedUserID).(primitive.ObjectID)
 	if !ok {
 		s.logger.Error("Failed getting local federateduser id",
 			zap.Any("error", "Not found in context: user_id"))
@@ -123,11 +123,11 @@ func (s *verifyProfileServiceImpl) Execute(
 	}
 
 	// Check if we need to override the federateduser role based on the request
-	if req.UserRole != 0 && (req.UserRole == domain.UserRoleIndividual || req.UserRole == domain.UserRoleCompany) {
+	if req.FederatedUserRole != 0 && (req.FederatedUserRole == domain.FederatedUserRoleIndividual || req.FederatedUserRole == domain.FederatedUserRoleCompany) {
 		s.logger.Info("Setting federateduser role based on request",
 			zap.Int("original_role", int(federateduser.Role)),
-			zap.Int("new_role", int(req.UserRole)))
-		federateduser.Role = req.UserRole
+			zap.Int("new_role", int(req.FederatedUserRole)))
+		federateduser.Role = req.FederatedUserRole
 	}
 
 	//
@@ -139,9 +139,9 @@ func (s *verifyProfileServiceImpl) Execute(
 	s.validateCommonFields(req, e)
 
 	// Role-specific validation
-	if federateduser.Role == domain.UserRoleIndividual {
+	if federateduser.Role == domain.FederatedUserRoleIndividual {
 		s.validateCustomerFields(req, e)
-	} else if federateduser.Role == domain.UserRoleCompany {
+	} else if federateduser.Role == domain.FederatedUserRoleCompany {
 		s.validateRetailerFields(req, e)
 	} else {
 		s.logger.Warn("Unrecognized federateduser role", zap.Int("role", int(federateduser.Role)))
@@ -173,17 +173,17 @@ func (s *verifyProfileServiceImpl) Execute(
 	// STEP 6: Generate appropriate response
 	//
 	var responseMessage string
-	if federateduser.Role == domain.UserRoleIndividual {
+	if federateduser.Role == domain.FederatedUserRoleIndividual {
 		responseMessage = "Your profile has been submitted for verification. You'll be notified once it's been reviewed."
-	} else if federateduser.Role == domain.UserRoleCompany {
+	} else if federateduser.Role == domain.FederatedUserRoleCompany {
 		responseMessage = "Your retailer profile has been submitted for verification. Our team will review your application and contact you soon."
 	} else {
 		responseMessage = "Your profile has been submitted for verification."
 	}
 
 	return &VerifyProfileResponseDTO{
-		Message:  responseMessage,
-		UserRole: federateduser.Role,
+		Message:           responseMessage,
+		FederatedUserRole: federateduser.Role,
 	}, nil
 }
 

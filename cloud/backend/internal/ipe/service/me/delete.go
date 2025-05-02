@@ -74,7 +74,7 @@ func (svc *deleteMeServiceImpl) Execute(sessCtx context.Context, req *DeleteMeRe
 	// STEP 2: Get required from context.
 	//
 
-	sessionUserID, ok := sessCtx.Value(constants.SessionUserID).(primitive.ObjectID)
+	sessionUserID, ok := sessCtx.Value(constants.SessionFederatedUserID).(primitive.ObjectID)
 	if !ok {
 		svc.logger.Error("Failed getting local user id",
 			zap.Any("error", "Not found in context: user_id"))
@@ -82,7 +82,7 @@ func (svc *deleteMeServiceImpl) Execute(sessCtx context.Context, req *DeleteMeRe
 	}
 
 	// Defend against admin deleting themselves
-	sessionUserRole, _ := sessCtx.Value(constants.SessionUserRole).(int8)
+	sessionUserRole, _ := sessCtx.Value(constants.SessionFederatedUserRole).(int8)
 	if sessionUserRole == dom_user.UserRoleRoot {
 		svc.logger.Warn("admin is not allowed to delete themselves",
 			zap.Any("error", ""))

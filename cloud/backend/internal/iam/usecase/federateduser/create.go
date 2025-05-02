@@ -11,7 +11,7 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
-type UserCreateUseCase interface {
+type FederatedUserCreateUseCase interface {
 	Execute(ctx context.Context, user *dom_user.FederatedUser) error
 }
 
@@ -21,7 +21,7 @@ type userCreateUseCaseImpl struct {
 	repo   dom_user.Repository
 }
 
-func NewUserCreateUseCase(config *config.Configuration, logger *zap.Logger, repo dom_user.Repository) UserCreateUseCase {
+func NewFederatedUserCreateUseCase(config *config.Configuration, logger *zap.Logger, repo dom_user.Repository) FederatedUserCreateUseCase {
 	return &userCreateUseCaseImpl{config, logger, repo}
 }
 

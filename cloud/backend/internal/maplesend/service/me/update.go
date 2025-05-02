@@ -63,7 +63,7 @@ func (svc *updateMeServiceImpl) Execute(sessCtx context.Context, req *UpdateMeRe
 	// Get required from context.
 	//
 
-	userID, ok := sessCtx.Value(constants.SessionUserID).(primitive.ObjectID)
+	userID, ok := sessCtx.Value(constants.SessionFederatedUserID).(primitive.ObjectID)
 	if !ok {
 		svc.logger.Error("Failed getting local user id",
 			zap.Any("error", "Not found in context: user_id"))

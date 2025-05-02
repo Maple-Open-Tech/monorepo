@@ -11,21 +11,21 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
-type UserDeleteUserByEmailUseCase interface {
+type FederatedUserDeleteFederatedUserByEmailUseCase interface {
 	Execute(ctx context.Context, email string) error
 }
 
-type userDeleteUserByEmailImpl struct {
+type userDeleteFederatedUserByEmailImpl struct {
 	config *config.Configuration
 	logger *zap.Logger
 	repo   dom_user.Repository
 }
 
-func NewUserDeleteUserByEmailUseCase(config *config.Configuration, logger *zap.Logger, repo dom_user.Repository) UserDeleteUserByEmailUseCase {
-	return &userDeleteUserByEmailImpl{config, logger, repo}
+func NewFederatedUserDeleteFederatedUserByEmailUseCase(config *config.Configuration, logger *zap.Logger, repo dom_user.Repository) FederatedUserDeleteFederatedUserByEmailUseCase {
+	return &userDeleteFederatedUserByEmailImpl{config, logger, repo}
 }
 
-func (uc *userDeleteUserByEmailImpl) Execute(ctx context.Context, email string) error {
+func (uc *userDeleteFederatedUserByEmailImpl) Execute(ctx context.Context, email string) error {
 	//
 	// STEP 1: Validation.
 	//

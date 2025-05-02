@@ -24,7 +24,7 @@ type tokenGetSessionServiceImpl struct {
 	passwordProvider          password.Provider
 	cache                     mongodbcache.Cacher
 	jwtProvider               jwt.Provider
-	userGetBySessionIDUseCase uc_user.UserGetBySessionIDUseCase
+	userGetBySessionIDUseCase uc_user.FederatedUserGetBySessionIDUseCase
 }
 
 func NewTokenGetSessionService(
@@ -32,7 +32,7 @@ func NewTokenGetSessionService(
 	pp password.Provider,
 	cach mongodbcache.Cacher,
 	jwtp jwt.Provider,
-	userGetBySessionIDUseCase uc_user.UserGetBySessionIDUseCase,
+	userGetBySessionIDUseCase uc_user.FederatedUserGetBySessionIDUseCase,
 ) TokenGetSessionService {
 	return &tokenGetSessionServiceImpl{logger, pp, cach, jwtp, userGetBySessionIDUseCase}
 }
@@ -54,7 +54,7 @@ func (impl *tokenGetSessionServiceImpl) Execute(ctx context.Context, sessionID s
 	// Lookup our user profile in the session or return 500 error.
 	user, err := impl.userGetBySessionIDUseCase.Execute(ctx, sessionID)
 	if err != nil {
-		impl.logger.Warn("GetUserBySessionID error", zap.Any("err", err), zap.Any("middleware", "PostJWTProcessorMiddleware"))
+		impl.logger.Warn("GetFederatedUserBySessionID error", zap.Any("err", err), zap.Any("middleware", "PostJWTProcessorMiddleware"))
 		return nil, httperror.NewForUnauthorizedWithSingleField("message", "error looking up session id")
 	}
 

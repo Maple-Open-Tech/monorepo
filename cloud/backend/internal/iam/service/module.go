@@ -13,7 +13,7 @@ func Module() fx.Option {
 		fx.Provide(
 			token.NewTokenVerifyService,
 			token.NewTokenGetSessionService,
-			gateway.NewGatewayUserRegisterService,
+			gateway.NewGatewayFederatedUserRegisterService,
 			gateway.NewGatewayLoginService,
 			gateway.NewGatewayLogoutService,
 			gateway.NewGatewayResetPasswordService,

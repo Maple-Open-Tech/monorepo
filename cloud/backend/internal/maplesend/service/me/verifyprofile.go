@@ -103,7 +103,7 @@ func (s *verifyProfileServiceImpl) Execute(
 	//
 	// STEP 1: Get required from context.
 	//
-	userID, ok := sessCtx.Value(constants.SessionUserID).(primitive.ObjectID)
+	userID, ok := sessCtx.Value(constants.SessionFederatedUserID).(primitive.ObjectID)
 	if !ok {
 		s.logger.Error("Failed getting local user id",
 			zap.Any("error", "Not found in context: user_id"))

@@ -21,35 +21,35 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/storage/database/mongodbcache"
 )
 
-type GatewayUserRegisterService interface {
+type GatewayFederatedUserRegisterService interface {
 	Execute(
 		sessCtx context.Context,
 		req *RegisterCustomerRequestIDO,
 	) error
 }
 
-type gatewayUserRegisterServiceImpl struct {
-	config                           *config.Configuration
-	passwordProvider                 password.Provider
-	cache                            mongodbcache.Cacher
-	jwtProvider                      jwt.Provider
-	userGetByEmailUseCase            uc_user.UserGetByEmailUseCase
-	userCreateUseCase                uc_user.UserCreateUseCase
-	userUpdateUseCase                uc_user.UserUpdateUseCase
-	sendUserVerificationEmailUseCase uc_emailer.SendUserVerificationEmailUseCase
+type gatewayFederatedUserRegisterServiceImpl struct {
+	config                                    *config.Configuration
+	passwordProvider                          password.Provider
+	cache                                     mongodbcache.Cacher
+	jwtProvider                               jwt.Provider
+	userGetByEmailUseCase                     uc_user.FederatedUserGetByEmailUseCase
+	userCreateUseCase                         uc_user.FederatedUserCreateUseCase
+	userUpdateUseCase                         uc_user.FederatedUserUpdateUseCase
+	sendFederatedUserVerificationEmailUseCase uc_emailer.SendFederatedUserVerificationEmailUseCase
 }
 
-func NewGatewayUserRegisterService(
+func NewGatewayFederatedUserRegisterService(
 	cfg *config.Configuration,
 	pp password.Provider,
 	cach mongodbcache.Cacher,
 	jwtp jwt.Provider,
-	uc1 uc_user.UserGetByEmailUseCase,
-	uc2 uc_user.UserCreateUseCase,
-	uc3 uc_user.UserUpdateUseCase,
-	uc4 uc_emailer.SendUserVerificationEmailUseCase,
-) GatewayUserRegisterService {
-	return &gatewayUserRegisterServiceImpl{cfg, pp, cach, jwtp, uc1, uc2, uc3, uc4}
+	uc1 uc_user.FederatedUserGetByEmailUseCase,
+	uc2 uc_user.FederatedUserCreateUseCase,
+	uc3 uc_user.FederatedUserUpdateUseCase,
+	uc4 uc_emailer.SendFederatedUserVerificationEmailUseCase,
+) GatewayFederatedUserRegisterService {
+	return &gatewayFederatedUserRegisterServiceImpl{cfg, pp, cach, jwtp, uc1, uc2, uc3, uc4}
 }
 
 type RegisterCustomerRequestIDO struct {
@@ -79,7 +79,7 @@ type RegisterCustomerResponseIDO struct {
 	RefreshTokenExpiryTime time.Time             `json:"refresh_token_expiry_time"`
 }
 
-func (s *gatewayUserRegisterServiceImpl) Execute(
+func (s *gatewayFederatedUserRegisterServiceImpl) Execute(
 	sessCtx context.Context,
 	req *RegisterCustomerRequestIDO,
 ) error {
@@ -173,19 +173,19 @@ func (s *gatewayUserRegisterServiceImpl) Execute(
 	}
 
 	// Create our federateduser.
-	u, err = s.createCustomerUserForRequest(sessCtx, req)
+	u, err = s.createCustomerFederatedUserForRequest(sessCtx, req)
 	if err != nil {
 		return err
 	}
 
-	if err := s.sendUserVerificationEmailUseCase.Execute(context.Background(), req.Module, u); err != nil {
+	if err := s.sendFederatedUserVerificationEmailUseCase.Execute(context.Background(), req.Module, u); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *gatewayUserRegisterServiceImpl) createCustomerUserForRequest(sessCtx context.Context, req *RegisterCustomerRequestIDO) (*domain.FederatedUser, error) {
+func (s *gatewayFederatedUserRegisterServiceImpl) createCustomerFederatedUserForRequest(sessCtx context.Context, req *RegisterCustomerRequestIDO) (*domain.FederatedUser, error) {
 
 	password, err := sstring.NewSecureString(req.Password)
 	if err != nil {
@@ -215,7 +215,7 @@ func (s *gatewayUserRegisterServiceImpl) createCustomerUserForRequest(sessCtx co
 		Email:                 req.Email,
 		PasswordHash:          passwordHash,
 		PasswordHashAlgorithm: s.passwordProvider.AlgorithmName(),
-		Role:                  domain.UserRoleIndividual,
+		Role:                  domain.FederatedUserRoleIndividual,
 		Phone:                 req.Phone,
 		Country:               req.Country,
 		Timezone:              req.Timezone,
@@ -238,7 +238,7 @@ func (s *gatewayUserRegisterServiceImpl) createCustomerUserForRequest(sessCtx co
 		WasEmailVerified:        false,
 		EmailVerificationCode:   fmt.Sprintf("%s", emailVerificationCode),
 		EmailVerificationExpiry: time.Now().Add(72 * time.Hour),
-		Status:                  domain.UserStatusActive,
+		Status:                  domain.FederatedUserStatusActive,
 		HasShippingAddress:      false,
 		ShippingName:            "",
 		ShippingPhone:           "",

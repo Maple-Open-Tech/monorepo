@@ -11,7 +11,7 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
-type UserCountByFilterUseCase interface {
+type FederatedUserCountByFilterUseCase interface {
 	Execute(ctx context.Context, filter *dom_user.FederatedUserFilter) (uint64, error)
 }
 
@@ -21,11 +21,11 @@ type userCountByFilterUseCaseImpl struct {
 	repo   dom_user.Repository
 }
 
-func NewUserCountByFilterUseCase(
+func NewFederatedUserCountByFilterUseCase(
 	config *config.Configuration,
 	logger *zap.Logger,
 	repo dom_user.Repository,
-) UserCountByFilterUseCase {
+) FederatedUserCountByFilterUseCase {
 	return &userCountByFilterUseCaseImpl{config, logger, repo}
 }
 

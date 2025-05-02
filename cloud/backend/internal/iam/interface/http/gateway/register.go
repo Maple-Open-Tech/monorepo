@@ -19,20 +19,20 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
-type GatewayUserRegisterHTTPHandler struct {
+type GatewayFederatedUserRegisterHTTPHandler struct {
 	logger     *zap.Logger
 	dbClient   *mongo.Client
-	service    sv_gateway.GatewayUserRegisterService
+	service    sv_gateway.GatewayFederatedUserRegisterService
 	middleware middleware.Middleware
 }
 
-func NewGatewayUserRegisterHTTPHandler(
+func NewGatewayFederatedUserRegisterHTTPHandler(
 	logger *zap.Logger,
 	dbClient *mongo.Client,
-	service sv_gateway.GatewayUserRegisterService,
+	service sv_gateway.GatewayFederatedUserRegisterService,
 	middleware middleware.Middleware,
-) *GatewayUserRegisterHTTPHandler {
-	return &GatewayUserRegisterHTTPHandler{
+) *GatewayFederatedUserRegisterHTTPHandler {
+	return &GatewayFederatedUserRegisterHTTPHandler{
 		logger:     logger,
 		dbClient:   dbClient,
 		service:    service,
@@ -40,16 +40,16 @@ func NewGatewayUserRegisterHTTPHandler(
 	}
 }
 
-func (*GatewayUserRegisterHTTPHandler) Pattern() string {
+func (*GatewayFederatedUserRegisterHTTPHandler) Pattern() string {
 	return "POST /iam/api/v1/register"
 }
 
-func (r *GatewayUserRegisterHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (r *GatewayFederatedUserRegisterHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Apply MaplesSend middleware before handling the request
 	r.middleware.Attach(r.Execute)(w, req)
 }
 
-func (h *GatewayUserRegisterHTTPHandler) unmarshalRegisterCustomerRequest(
+func (h *GatewayFederatedUserRegisterHTTPHandler) unmarshalRegisterCustomerRequest(
 	ctx context.Context,
 	r *http.Request,
 ) (*sv_gateway.RegisterCustomerRequestIDO, error) {
@@ -79,7 +79,7 @@ func (h *GatewayUserRegisterHTTPHandler) unmarshalRegisterCustomerRequest(
 	return &requestData, nil
 }
 
-func (h *GatewayUserRegisterHTTPHandler) Execute(w http.ResponseWriter, r *http.Request) {
+func (h *GatewayFederatedUserRegisterHTTPHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	data, err := h.unmarshalRegisterCustomerRequest(ctx, r)

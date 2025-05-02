@@ -20,21 +20,21 @@ type GatewayForgotPasswordService interface {
 }
 
 type gatewayForgotPasswordServiceImpl struct {
-	passwordProvider                  password.Provider
-	cache                             mongodbcache.Cacher
-	jwtProvider                       jwt.Provider
-	userGetByEmailUseCase             uc_user.UserGetByEmailUseCase
-	userUpdateUseCase                 uc_user.UserUpdateUseCase
-	sendUserPasswordResetEmailUseCase uc_emailer.SendUserPasswordResetEmailUseCase
+	passwordProvider                           password.Provider
+	cache                                      mongodbcache.Cacher
+	jwtProvider                                jwt.Provider
+	userGetByEmailUseCase                      uc_user.FederatedUserGetByEmailUseCase
+	userUpdateUseCase                          uc_user.FederatedUserUpdateUseCase
+	sendFederatedUserPasswordResetEmailUseCase uc_emailer.SendFederatedUserPasswordResetEmailUseCase
 }
 
 func NewGatewayForgotPasswordService(
 	pp password.Provider,
 	cach mongodbcache.Cacher,
 	jwtp jwt.Provider,
-	uc1 uc_user.UserGetByEmailUseCase,
-	uc2 uc_user.UserUpdateUseCase,
-	uc3 uc_emailer.SendUserPasswordResetEmailUseCase,
+	uc1 uc_user.FederatedUserGetByEmailUseCase,
+	uc2 uc_user.FederatedUserUpdateUseCase,
+	uc3 uc_emailer.SendFederatedUserPasswordResetEmailUseCase,
 ) GatewayForgotPasswordService {
 	return &gatewayForgotPasswordServiceImpl{pp, cach, jwtp, uc1, uc2, uc3}
 }
@@ -112,7 +112,7 @@ func (s *gatewayForgotPasswordServiceImpl) Execute(sessCtx context.Context, req 
 	// STEP 5: Send email
 	//
 
-	if err := s.sendUserPasswordResetEmailUseCase.Execute(sessCtx, req.Module, u); err != nil {
+	if err := s.sendFederatedUserPasswordResetEmailUseCase.Execute(sessCtx, req.Module, u); err != nil {
 		// Skip any error handling...
 	}
 

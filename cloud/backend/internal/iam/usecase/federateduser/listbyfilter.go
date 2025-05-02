@@ -11,7 +11,7 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
-type UserListByFilterUseCase interface {
+type FederatedUserListByFilterUseCase interface {
 	Execute(ctx context.Context, filter *dom_user.FederatedUserFilter) (*dom_user.FederatedUserFilterResult, error)
 }
 
@@ -21,11 +21,11 @@ type userListByFilterUseCaseImpl struct {
 	repo   dom_user.Repository
 }
 
-func NewUserListByFilterUseCase(
+func NewFederatedUserListByFilterUseCase(
 	config *config.Configuration,
 	logger *zap.Logger,
 	repo dom_user.Repository,
-) UserListByFilterUseCase {
+) FederatedUserListByFilterUseCase {
 	return &userListByFilterUseCaseImpl{config, logger, repo}
 }
 

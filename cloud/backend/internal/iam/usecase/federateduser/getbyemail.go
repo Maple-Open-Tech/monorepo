@@ -11,7 +11,7 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
-type UserGetByEmailUseCase interface {
+type FederatedUserGetByEmailUseCase interface {
 	Execute(ctx context.Context, email string) (*dom_user.FederatedUser, error)
 }
 
@@ -21,7 +21,7 @@ type userGetByEmailUseCaseImpl struct {
 	repo   dom_user.Repository
 }
 
-func NewUserGetByEmailUseCase(config *config.Configuration, logger *zap.Logger, repo dom_user.Repository) UserGetByEmailUseCase {
+func NewFederatedUserGetByEmailUseCase(config *config.Configuration, logger *zap.Logger, repo dom_user.Repository) FederatedUserGetByEmailUseCase {
 	return &userGetByEmailUseCaseImpl{config, logger, repo}
 }
 

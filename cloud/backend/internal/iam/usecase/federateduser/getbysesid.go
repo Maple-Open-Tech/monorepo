@@ -13,7 +13,7 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/storage/database/mongodbcache"
 )
 
-type UserGetBySessionIDUseCase interface {
+type FederatedUserGetBySessionIDUseCase interface {
 	Execute(ctx context.Context, sessionID string) (*dom_user.FederatedUser, error)
 }
 
@@ -23,7 +23,7 @@ type userGetBySessionIDUseCaseImpl struct {
 	cache  mongodbcache.Cacher
 }
 
-func NewUserGetBySessionIDUseCase(config *config.Configuration, logger *zap.Logger, ca mongodbcache.Cacher) UserGetBySessionIDUseCase {
+func NewFederatedUserGetBySessionIDUseCase(config *config.Configuration, logger *zap.Logger, ca mongodbcache.Cacher) FederatedUserGetBySessionIDUseCase {
 	return &userGetBySessionIDUseCaseImpl{config, logger, ca}
 }
 

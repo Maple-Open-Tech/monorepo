@@ -10,7 +10,7 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
-type UserUpdateUseCase interface {
+type FederatedUserUpdateUseCase interface {
 	Execute(ctx context.Context, user *dom_user.FederatedUser) error
 }
 
@@ -20,7 +20,7 @@ type userUpdateUseCaseImpl struct {
 	repo   dom_user.Repository
 }
 
-func NewUserUpdateUseCase(config *config.Configuration, logger *zap.Logger, repo dom_user.Repository) UserUpdateUseCase {
+func NewFederatedUserUpdateUseCase(config *config.Configuration, logger *zap.Logger, repo dom_user.Repository) FederatedUserUpdateUseCase {
 	return &userUpdateUseCaseImpl{config, logger, repo}
 }
 

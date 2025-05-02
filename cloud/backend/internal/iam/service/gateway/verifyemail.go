@@ -15,13 +15,13 @@ type GatewayVerifyEmailService interface {
 }
 
 type gatewayVerifyEmailServiceImpl struct {
-	userGetByVerificationCodeUseCase uc_user.UserGetByVerificationCodeUseCase
-	userUpdateUseCase                uc_user.UserUpdateUseCase
+	userGetByVerificationCodeUseCase uc_user.FederatedUserGetByVerificationCodeUseCase
+	userUpdateUseCase                uc_user.FederatedUserUpdateUseCase
 }
 
 func NewGatewayVerifyEmailService(
-	uc1 uc_user.UserGetByVerificationCodeUseCase,
-	uc2 uc_user.UserUpdateUseCase,
+	uc1 uc_user.FederatedUserGetByVerificationCodeUseCase,
+	uc2 uc_user.FederatedUserUpdateUseCase,
 ) GatewayVerifyEmailService {
 	return &gatewayVerifyEmailServiceImpl{uc1, uc2}
 }
@@ -31,8 +31,8 @@ type GatewayVerifyEmailRequestIDO struct {
 }
 
 type GatwayVerifyEmailResponseIDO struct {
-	Message  string `json:"message"`
-	UserRole int8   `bson:"user_role" json:"user_role"`
+	Message           string `json:"message"`
+	FederatedUserRole int8   `bson:"user_role" json:"user_role"`
 }
 
 func (s *gatewayVerifyEmailServiceImpl) Execute(sessCtx context.Context, req *GatewayVerifyEmailRequestIDO) (*GatwayVerifyEmailResponseIDO, error) {
@@ -53,12 +53,12 @@ func (s *gatewayVerifyEmailServiceImpl) Execute(sessCtx context.Context, req *Ga
 	//TODO: Handle expiry dates.
 
 	// Extract from our session the following data.
-	// userID := sessCtx.Value(constants.SessionUserID).(primitive.ObjectID)
+	// userID := sessCtx.Value(constants.SessionFederatedUserID).(primitive.ObjectID)
 	ipAddress, _ := sessCtx.Value(constants.SessionIPAddress).(string)
 
 	// Verify the user.
 	u.WasEmailVerified = true
-	// ou.ModifiedByUserID = userID
+	// ou.ModifiedByFederatedUserID = userID
 	u.ModifiedAt = time.Now()
 	// ou.ModifiedByName = fmt.Sprintf("%s %s", ou.FirstName, ou.LastName)
 	u.ModifiedFromIPAddress = ipAddress
@@ -71,7 +71,7 @@ func (s *gatewayVerifyEmailServiceImpl) Execute(sessCtx context.Context, req *Ga
 	//
 
 	switch u.Role {
-	case domain.UserRoleIndividual:
+	case domain.FederatedUserRoleIndividual:
 		{
 			res.Message = "Thank you for verifying. You may log in now to get started!"
 			break
@@ -82,7 +82,7 @@ func (s *gatewayVerifyEmailServiceImpl) Execute(sessCtx context.Context, req *Ga
 			break
 		}
 	}
-	res.UserRole = u.Role
+	res.FederatedUserRole = u.Role
 
 	return res, nil
 }

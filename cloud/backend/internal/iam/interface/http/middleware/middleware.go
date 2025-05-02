@@ -17,13 +17,13 @@ type Middleware interface {
 
 type middleware struct {
 	jwt                                 jwt.Provider
-	userGetBySessionIDUseCase           uc_user.UserGetBySessionIDUseCase
+	userGetBySessionIDUseCase           uc_user.FederatedUserGetBySessionIDUseCase
 	bannedIPAddressListAllValuesUseCase uc_bannedipaddress.BannedIPAddressListAllValuesUseCase
 }
 
 func NewMiddleware(
 	jwtp jwt.Provider,
-	uc1 uc_user.UserGetBySessionIDUseCase,
+	uc1 uc_user.FederatedUserGetBySessionIDUseCase,
 	uc2 uc_bannedipaddress.BannedIPAddressListAllValuesUseCase,
 ) Middleware {
 	return &middleware{

@@ -13,13 +13,13 @@ type GatewaySendVerifyEmailService interface {
 }
 
 type gatewaySendVerifyEmailServiceImpl struct {
-	userGetByEmailUseCase            uc_user.UserGetByEmailUseCase
-	sendUserVerificationEmailUseCase uc_emailer.SendUserVerificationEmailUseCase
+	userGetByEmailUseCase                     uc_user.FederatedUserGetByEmailUseCase
+	sendFederatedUserVerificationEmailUseCase uc_emailer.SendFederatedUserVerificationEmailUseCase
 }
 
 func NewGatewaySendVerifyEmailService(
-	uc1 uc_user.UserGetByEmailUseCase,
-	uc2 uc_emailer.SendUserVerificationEmailUseCase,
+	uc1 uc_user.FederatedUserGetByEmailUseCase,
+	uc2 uc_emailer.SendFederatedUserVerificationEmailUseCase,
 ) GatewaySendVerifyEmailService {
 	return &gatewaySendVerifyEmailServiceImpl{uc1, uc2}
 }
@@ -60,7 +60,7 @@ func (s *gatewaySendVerifyEmailServiceImpl) Execute(sessCtx context.Context, req
 		return httperror.NewForBadRequestWithSingleField("email", "does not exist")
 	}
 
-	if err := s.sendUserVerificationEmailUseCase.Execute(context.Background(), req.Module, u); err != nil {
+	if err := s.sendFederatedUserVerificationEmailUseCase.Execute(context.Background(), req.Module, u); err != nil {
 		// Skip any error handling...
 	}
 

@@ -11,27 +11,27 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
-type SendUserVerificationEmailUseCase interface {
+type SendFederatedUserVerificationEmailUseCase interface {
 	Execute(ctx context.Context, monolithModule int, user *domain.FederatedUser) error
 }
-type sendUserVerificationEmailUseCaseImpl struct {
+type sendFederatedUserVerificationEmailUseCaseImpl struct {
 	config  *config.Configuration
 	logger  *zap.Logger
 	emailer templatedemailer.TemplatedEmailer
 }
 
-func NewSendUserVerificationEmailUseCase(config *config.Configuration, logger *zap.Logger, emailer templatedemailer.TemplatedEmailer) SendUserVerificationEmailUseCase {
-	return &sendUserVerificationEmailUseCaseImpl{config, logger, emailer}
+func NewSendFederatedUserVerificationEmailUseCase(config *config.Configuration, logger *zap.Logger, emailer templatedemailer.TemplatedEmailer) SendFederatedUserVerificationEmailUseCase {
+	return &sendFederatedUserVerificationEmailUseCaseImpl{config, logger, emailer}
 }
 
-func (uc *sendUserVerificationEmailUseCaseImpl) Execute(ctx context.Context, monolithModule int, user *domain.FederatedUser) error {
+func (uc *sendFederatedUserVerificationEmailUseCaseImpl) Execute(ctx context.Context, monolithModule int, user *domain.FederatedUser) error {
 	//
 	// STEP 1: Validation.
 	//
 
 	e := make(map[string]string)
 	if user == nil {
-		e["user"] = "FederatedUser is missing value"
+		e["user"] = "User is missing value"
 	} else {
 		if user.FirstName == "" {
 			e["first_name"] = "First name is required"

@@ -30,16 +30,16 @@ type deleteMeServiceImpl struct {
 	config                *config.Configuration
 	logger                *zap.Logger
 	passwordProvider      password.Provider
-	userGetByIDUseCase    uc_user.UserGetByIDUseCase
-	userDeleteByIDUseCase uc_user.UserDeleteByIDUseCase
+	userGetByIDUseCase    uc_user.FederatedUserGetByIDUseCase
+	userDeleteByIDUseCase uc_user.FederatedUserDeleteByIDUseCase
 }
 
 func NewDeleteMeService(
 	config *config.Configuration,
 	logger *zap.Logger,
 	passwordProvider password.Provider,
-	userGetByIDUseCase uc_user.UserGetByIDUseCase,
-	userDeleteByIDUseCase uc_user.UserDeleteByIDUseCase,
+	userGetByIDUseCase uc_user.FederatedUserGetByIDUseCase,
+	userDeleteByIDUseCase uc_user.FederatedUserDeleteByIDUseCase,
 ) DeleteMeService {
 	return &deleteMeServiceImpl{
 		config:                config,
@@ -74,7 +74,7 @@ func (svc *deleteMeServiceImpl) Execute(sessCtx context.Context, req *DeleteMeRe
 	// STEP 2: Get required from context.
 	//
 
-	sessionUserID, ok := sessCtx.Value(constants.SessionUserID).(primitive.ObjectID)
+	sessionFederatedUserID, ok := sessCtx.Value(constants.SessionFederatedUserID).(primitive.ObjectID)
 	if !ok {
 		svc.logger.Error("Failed getting local federateduser id",
 			zap.Any("error", "Not found in context: user_id"))
@@ -82,8 +82,8 @@ func (svc *deleteMeServiceImpl) Execute(sessCtx context.Context, req *DeleteMeRe
 	}
 
 	// Defend against admin deleting themselves
-	sessionUserRole, _ := sessCtx.Value(constants.SessionUserRole).(int8)
-	if sessionUserRole == dom_user.UserRoleRoot {
+	sessionFederatedUserRole, _ := sessCtx.Value(constants.SessionFederatedUserRole).(int8)
+	if sessionFederatedUserRole == dom_user.FederatedUserRoleRoot {
 		svc.logger.Warn("admin is not allowed to delete themselves",
 			zap.Any("error", ""))
 		return httperror.NewForForbiddenWithSingleField("message", "admins do not have permission to delete themselves")
@@ -93,14 +93,14 @@ func (svc *deleteMeServiceImpl) Execute(sessCtx context.Context, req *DeleteMeRe
 	// STEP 3: Get federateduser from database.
 	//
 
-	federateduser, err := svc.userGetByIDUseCase.Execute(sessCtx, sessionUserID)
+	federateduser, err := svc.userGetByIDUseCase.Execute(sessCtx, sessionFederatedUserID)
 	if err != nil {
 		svc.logger.Error("Failed getting federateduser", zap.Any("error", err))
 		return err
 	}
 	if federateduser == nil {
 		errMsg := "FederatedUser does not exist"
-		svc.logger.Error(errMsg, zap.Any("user_id", sessionUserID))
+		svc.logger.Error(errMsg, zap.Any("user_id", sessionFederatedUserID))
 		return httperror.NewForBadRequestWithSingleField("message", errMsg)
 	}
 
@@ -125,12 +125,12 @@ func (svc *deleteMeServiceImpl) Execute(sessCtx context.Context, req *DeleteMeRe
 	// STEP 5: Delete federateduser.
 	//
 
-	err = svc.userDeleteByIDUseCase.Execute(sessCtx, sessionUserID)
+	err = svc.userDeleteByIDUseCase.Execute(sessCtx, sessionFederatedUserID)
 	if err != nil {
 		svc.logger.Error("Failed to delete federateduser", zap.Any("error", err))
 		return err
 	}
 
-	svc.logger.Info("FederatedUser successfully deleted", zap.Any("user_id", sessionUserID))
+	svc.logger.Info("FederatedUser successfully deleted", zap.Any("user_id", sessionFederatedUserID))
 	return nil
 }

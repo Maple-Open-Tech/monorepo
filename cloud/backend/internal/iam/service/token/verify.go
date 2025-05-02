@@ -29,7 +29,7 @@ func NewTokenVerifyService(
 	pp password.Provider,
 	cach mongodbcache.Cacher,
 	jwtp jwt.Provider,
-	userGetBySessionIDUseCase uc_user.UserGetBySessionIDUseCase) TokenVerifyService {
+	userGetBySessionIDUseCase uc_user.FederatedUserGetBySessionIDUseCase) TokenVerifyService {
 	return &tokenVerifyServiceImpl{logger, pp, cach, jwtp}
 }
 

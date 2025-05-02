@@ -40,20 +40,20 @@ func (mid *middleware) PostJWTProcessorMiddleware(fn http.HandlerFunc) http.Hand
 
 			// Save our user information to the context.
 			// Save our user.
-			ctx = context.WithValue(ctx, constants.SessionUser, user)
+			ctx = context.WithValue(ctx, constants.SessionFederatedUser, user)
 
 			// Save individual pieces of the user profile.
 			ctx = context.WithValue(ctx, constants.SessionID, sessionID)
-			ctx = context.WithValue(ctx, constants.SessionUserID, user.ID)
-			ctx = context.WithValue(ctx, constants.SessionUserRole, user.Role)
-			ctx = context.WithValue(ctx, constants.SessionUserName, user.Name)
-			ctx = context.WithValue(ctx, constants.SessionUserFirstName, user.FirstName)
-			ctx = context.WithValue(ctx, constants.SessionUserLastName, user.LastName)
-			ctx = context.WithValue(ctx, constants.SessionUserTimezone, user.Timezone)
-			// ctx = context.WithValue(ctx, constants.SessionUserStoreID, user.StoreID)
-			// ctx = context.WithValue(ctx, constants.SessionUserStoreName, user.StoreName)
-			// ctx = context.WithValue(ctx, constants.SessionUserStoreLevel, user.StoreLevel)
-			// ctx = context.WithValue(ctx, constants.SessionUserStoreTimezone, user.StoreTimezone)
+			ctx = context.WithValue(ctx, constants.SessionFederatedUserID, user.ID)
+			ctx = context.WithValue(ctx, constants.SessionFederatedUserRole, user.Role)
+			ctx = context.WithValue(ctx, constants.SessionFederatedUserName, user.Name)
+			ctx = context.WithValue(ctx, constants.SessionFederatedUserFirstName, user.FirstName)
+			ctx = context.WithValue(ctx, constants.SessionFederatedUserLastName, user.LastName)
+			ctx = context.WithValue(ctx, constants.SessionFederatedUserTimezone, user.Timezone)
+			// ctx = context.WithValue(ctx, constants.SessionFederatedUserStoreID, user.StoreID)
+			// ctx = context.WithValue(ctx, constants.SessionFederatedUserStoreName, user.StoreName)
+			// ctx = context.WithValue(ctx, constants.SessionFederatedUserStoreLevel, user.StoreLevel)
+			// ctx = context.WithValue(ctx, constants.SessionFederatedUserStoreTimezone, user.StoreTimezone)
 		}
 
 		fn(w, r.WithContext(ctx))

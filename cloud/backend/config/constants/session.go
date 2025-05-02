@@ -8,17 +8,17 @@ const (
 	SessionID
 	SessionIPAddress
 	SessionProxies
-	SessionUser
-	SessionUserCompanyName
-	SessionUserRole
-	SessionUserID
-	SessionUserUUID
-	SessionUserTimezone
-	SessionUserName
-	SessionUserFirstName
-	SessionUserLastName
-	SessionUserStoreID
-	SessionUserStoreName
-	SessionUserStoreLevel
-	SessionUserStoreTimezone
+	SessionFederatedUser
+	SessionFederatedUserCompanyName
+	SessionFederatedUserRole
+	SessionFederatedUserID
+	SessionFederatedUserUUID
+	SessionFederatedUserTimezone
+	SessionFederatedUserName
+	SessionFederatedUserFirstName
+	SessionFederatedUserLastName
+	SessionFederatedUserStoreID
+	SessionFederatedUserStoreName
+	SessionFederatedUserStoreLevel
+	SessionFederatedUserStoreTimezone
 )

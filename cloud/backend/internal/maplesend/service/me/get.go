@@ -88,7 +88,7 @@ type GetMeService interface {
 type getMeServiceImpl struct {
 	config                      *config.Configuration
 	logger                      *zap.Logger
-	federatedUserGetByIDUseCase uc_federateduser.UserGetByIDUseCase
+	federatedUserGetByIDUseCase uc_federateduser.FederatedUserGetByIDUseCase
 	userGetByIDUseCase          uc_user.UserGetByIDUseCase
 	userCreateUseCase           uc_user.UserCreateUseCase
 	userUpdateUseCase           uc_user.UserUpdateUseCase
@@ -97,7 +97,7 @@ type getMeServiceImpl struct {
 func NewGetMeService(
 	config *config.Configuration,
 	logger *zap.Logger,
-	federatedUserGetByIDUseCase uc_federateduser.UserGetByIDUseCase,
+	federatedUserGetByIDUseCase uc_federateduser.FederatedUserGetByIDUseCase,
 	userGetByIDUseCase uc_user.UserGetByIDUseCase,
 	userCreateUseCase uc_user.UserCreateUseCase,
 	userUpdateUseCase uc_user.UserUpdateUseCase,
@@ -117,7 +117,7 @@ func (svc *getMeServiceImpl) Execute(sessCtx context.Context) (*MeResponseDTO, e
 	// Get required from context.
 	//
 
-	userID, ok := sessCtx.Value(constants.SessionUserID).(primitive.ObjectID)
+	userID, ok := sessCtx.Value(constants.SessionFederatedUserID).(primitive.ObjectID)
 	if !ok {
 		svc.logger.Error("Failed getting local user id",
 			zap.Any("error", "Not found in context: user_id"))

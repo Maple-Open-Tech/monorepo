@@ -13,7 +13,7 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
-type UserGetByIDUseCase interface {
+type FederatedUserGetByIDUseCase interface {
 	Execute(ctx context.Context, id primitive.ObjectID) (*dom_user.FederatedUser, error)
 }
 
@@ -23,7 +23,7 @@ type userGetByIDUseCaseImpl struct {
 	repo   dom_user.Repository
 }
 
-func NewUserGetByIDUseCase(config *config.Configuration, logger *zap.Logger, repo dom_user.Repository) UserGetByIDUseCase {
+func NewFederatedUserGetByIDUseCase(config *config.Configuration, logger *zap.Logger, repo dom_user.Repository) FederatedUserGetByIDUseCase {
 	return &userGetByIDUseCaseImpl{config, logger, repo}
 }
 

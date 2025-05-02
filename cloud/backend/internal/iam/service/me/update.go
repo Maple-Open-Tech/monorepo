@@ -37,17 +37,17 @@ type UpdateMeService interface {
 type updateMeServiceImpl struct {
 	config                *config.Configuration
 	logger                *zap.Logger
-	userGetByIDUseCase    uc_user.UserGetByIDUseCase
-	userGetByEmailUseCase uc_user.UserGetByEmailUseCase
-	userUpdateUseCase     uc_user.UserUpdateUseCase
+	userGetByIDUseCase    uc_user.FederatedUserGetByIDUseCase
+	userGetByEmailUseCase uc_user.FederatedUserGetByEmailUseCase
+	userUpdateUseCase     uc_user.FederatedUserUpdateUseCase
 }
 
 func NewUpdateMeService(
 	config *config.Configuration,
 	logger *zap.Logger,
-	userGetByIDUseCase uc_user.UserGetByIDUseCase,
-	userGetByEmailUseCase uc_user.UserGetByEmailUseCase,
-	userUpdateUseCase uc_user.UserUpdateUseCase,
+	userGetByIDUseCase uc_user.FederatedUserGetByIDUseCase,
+	userGetByEmailUseCase uc_user.FederatedUserGetByEmailUseCase,
+	userUpdateUseCase uc_user.FederatedUserUpdateUseCase,
 ) UpdateMeService {
 	return &updateMeServiceImpl{
 		config:                config,
@@ -63,7 +63,7 @@ func (svc *updateMeServiceImpl) Execute(sessCtx context.Context, req *UpdateMeRe
 	// Get required from context.
 	//
 
-	userID, ok := sessCtx.Value(constants.SessionUserID).(primitive.ObjectID)
+	userID, ok := sessCtx.Value(constants.SessionFederatedUserID).(primitive.ObjectID)
 	if !ok {
 		svc.logger.Error("Failed getting local federateduser id",
 			zap.Any("error", "Not found in context: user_id"))
@@ -139,23 +139,23 @@ func (svc *updateMeServiceImpl) Execute(sessCtx context.Context, req *UpdateMeRe
 	// Check if the requested email is already taken by another federateduser.
 	//
 	if req.Email != federateduser.Email {
-		existingUser, err := svc.userGetByEmailUseCase.Execute(sessCtx, req.Email)
+		existingFederatedUser, err := svc.userGetByEmailUseCase.Execute(sessCtx, req.Email)
 		if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
 			svc.logger.Error("Failed checking existing email", zap.String("email", req.Email), zap.Any("error", err))
 			return nil, err // Internal Server Error
 		}
-		if existingUser != nil {
+		if existingFederatedUser != nil {
 			// Email exists. Check if it belongs to the *current* federateduser (which shouldn't happen based on the outer if, but defensive check).
-			// The important check is implicit: if existingUser is not nil, the email is taken.
-			// We already know req.Email != federateduser.Email, so if existingUser is found, it *must* be another federateduser.
+			// The important check is implicit: if existingFederatedUser is not nil, the email is taken.
+			// We already know req.Email != federateduser.Email, so if existingFederatedUser is found, it *must* be another federateduser.
 			svc.logger.Warn("Attempted to update to an email already in use",
 				zap.String("user_id", userID.Hex()),
-				zap.String("existing_user_id", existingUser.ID.Hex()),
+				zap.String("existing_user_id", existingFederatedUser.ID.Hex()),
 				zap.String("email", req.Email))
 			e["email"] = "This email address is already in use."
 			return nil, httperror.NewForBadRequest(&e)
 		}
-		// If err is mongo.ErrNoDocuments or existingUser is nil, the email is available.
+		// If err is mongo.ErrNoDocuments or existingFederatedUser is nil, the email is available.
 	}
 
 	//

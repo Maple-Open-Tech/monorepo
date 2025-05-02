@@ -13,7 +13,7 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
 
-type UserDeleteByIDUseCase interface {
+type FederatedUserDeleteByIDUseCase interface {
 	Execute(ctx context.Context, id primitive.ObjectID) error
 }
 
@@ -23,7 +23,7 @@ type userDeleteByIDImpl struct {
 	repo   dom_user.Repository
 }
 
-func NewUserDeleteByIDUseCase(config *config.Configuration, logger *zap.Logger, repo dom_user.Repository) UserDeleteByIDUseCase {
+func NewFederatedUserDeleteByIDUseCase(config *config.Configuration, logger *zap.Logger, repo dom_user.Repository) FederatedUserDeleteByIDUseCase {
 	return &userDeleteByIDImpl{config, logger, repo}
 }
 

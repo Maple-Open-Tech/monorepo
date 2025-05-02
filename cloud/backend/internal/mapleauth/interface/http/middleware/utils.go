@@ -20,7 +20,7 @@ func init() {
 	// Exact matches
 	exactPaths = map[string]bool{
 		// "/mapleauth/api/v1/reset-password":      true,
-		"/mapleauth/api/v1/login/token/refresh": true,
+		// "/mapleauth/api/v1/token/refresh": true, // This is counterintuitive to the token refresh api endpoint
 	}
 
 	// Pattern matches

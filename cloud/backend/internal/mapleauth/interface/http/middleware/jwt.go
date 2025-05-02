@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -43,10 +44,10 @@ func (mid *middleware) JWTProcessorMiddleware(fn http.HandlerFunc) http.HandlerF
 				return
 			}
 
-			http.Error(w, "attempting to access a protected endpoint", http.StatusUnauthorized)
+			http.Error(w, fmt.Sprintf("attempting to access a protected endpoint and has session error: %v", err), http.StatusUnauthorized)
 			return
 		} else {
-			http.Error(w, "attempting to access a protected endpoint", http.StatusUnauthorized)
+			http.Error(w, "attempting to access a protected endpoint and authorization not set", http.StatusUnauthorized)
 			return
 		}
 	}

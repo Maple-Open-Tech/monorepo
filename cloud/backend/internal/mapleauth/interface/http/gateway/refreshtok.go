@@ -39,7 +39,7 @@ func NewGatewayRefreshTokenHTTPHandler(
 }
 
 func (*GatewayRefreshTokenHTTPHandler) Pattern() string {
-	return "POST /mapleauth/api/v1/login/token/refresh"
+	return "POST /mapleauth/api/v1/token/refresh"
 }
 
 func (r *GatewayRefreshTokenHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {

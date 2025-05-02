@@ -45,11 +45,10 @@ type GatewayLoginRequestIDO struct {
 }
 
 type GatewayLoginResponseIDO struct {
-	BaseUser               *domain.BaseUser `json:"baseuser"`
-	AccessToken            string           `json:"access_token"`
-	AccessTokenExpiryTime  time.Time        `json:"access_token_expiry_time"`
-	RefreshToken           string           `json:"refresh_token"`
-	RefreshTokenExpiryTime time.Time        `json:"refresh_token_expiry_time"`
+	AccessToken            string    `json:"access_token"`
+	AccessTokenExpiryTime  time.Time `json:"access_token_expiry_time"`
+	RefreshToken           string    `json:"refresh_token"`
+	RefreshTokenExpiryTime time.Time `json:"refresh_token_expiry_time"`
 }
 
 func (s *gatewayLoginServiceImpl) Execute(sessCtx context.Context, req *GatewayLoginRequestIDO) (*GatewayLoginResponseIDO, error) {
@@ -152,7 +151,6 @@ func (s *gatewayLoginServiceImpl) loginWithUser(sessCtx context.Context, u *doma
 
 	// Return our auth keys.
 	return &GatewayLoginResponseIDO{
-		BaseUser:               u,
 		AccessToken:            accessToken,
 		AccessTokenExpiryTime:  accessTokenExpiry,
 		RefreshToken:           refreshToken,

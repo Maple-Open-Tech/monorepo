@@ -70,6 +70,7 @@ func Module() fx.Option {
 			evaluation.NewEvaluationGetByPropertyIDUseCase,
 			evaluation.NewEvaluationUpdateUseCase,
 			evaluation.NewAddPropertyPhotoUseCase,
+			evaluation.NewFindPhotosByEvaluationIDUseCase,
 		),
 	)
 }

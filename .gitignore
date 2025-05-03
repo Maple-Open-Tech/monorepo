@@ -189,3 +189,16 @@ env/pip-selfcheck.json
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+#—————————————————————————————
+# Application Specific Ignores
+#—————————————————————————————
+
+# Do not share developer's private notebook
+private.txt
+private_prod.md
+private.md
+private_*.md
+todo.txt
+private_docs
+private_docs/*

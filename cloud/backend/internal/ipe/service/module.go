@@ -4,14 +4,8 @@ package service
 import (
 	"go.uber.org/fx"
 
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/ipe/service/evaluation"
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/ipe/service/financialanalysis"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/ipe/service/gateway"
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/ipe/service/incomeproperty"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/ipe/service/me"
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/ipe/service/mortgage"
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/ipe/service/person/client"
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/ipe/service/person/presenter"
 	// "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/ipe/service/person/owner"
 )
 
@@ -33,30 +27,6 @@ func Module() fx.Option {
 			me.NewUpdateMeService,
 			me.NewVerifyProfileService,
 			me.NewDeleteMeService,
-
-			// Income Property services
-			incomeproperty.NewGetIncomePropertyService,
-			incomeproperty.NewCreateIncomePropertyService,
-			incomeproperty.NewListIncomePropertiesService,
-
-			// Financial Analysis services
-			financialanalysis.NewGetFinancialAnalysisService,
-			financialanalysis.NewCreateFinancialAnalysisService,
-
-			// Mortgage services
-			mortgage.NewGetMortgageService,
-			mortgage.NewCreateMortgageService,
-
-			// Person services
-			client.NewGetClientService,
-			client.NewCreateClientService,
-			presenter.NewCreatePresenterService,
-			// owner.NewCreateOwnerService,
-
-			// Evaluation services
-			evaluation.NewGetEvaluationService,
-			evaluation.NewCreateEvaluationService,
-			evaluation.NewFindPhotosByEvaluationIDUseCase,
 		),
 	)
 }

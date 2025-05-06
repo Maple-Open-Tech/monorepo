@@ -107,11 +107,11 @@ func (c *Client) RequestLoginOTT(email string) error {
 	}
 
 	// Optionally log success or parse the LoginOTTResponse if needed
-	// var response LoginOTTResponse
-	// if err := json.Unmarshal(body, &response); err != nil {
-	//     return fmt.Errorf("RequestLoginOTT: failed to parse success response body: %w", err)
-	// }
-	// fmt.Printf("RequestLoginOTT: success: %s\n", response.Message)
+	var response LoginOTTResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return fmt.Errorf("RequestLoginOTT: failed to parse success response body: %w", err)
+	}
+	fmt.Printf("RequestLoginOTT: success: %s\n", response.Message)
 
 	return nil
 }
@@ -176,6 +176,7 @@ func (c *Client) VerifyLoginOTT(email, ott string) (*VerifyOTTResponse, error) {
 		// Log the raw body for debugging if unmarshalling fails
 		return nil, fmt.Errorf("VerifyLoginOTT: failed to parse VerifyOTTResponse JSON from %s: %w. Raw body: %s", endpoint, err, string(body))
 	}
+	fmt.Printf("VerifyLoginOTT: success: %s\n", response)
 
 	return &response, nil
 }
@@ -201,6 +202,9 @@ func censorEmail(email string) string {
 
 // VerifyPasswordAndCompleteLogin verifies password locally and completes the login
 func (c *Client) VerifyPasswordAndCompleteLogin(email, password string, ottResponse *VerifyOTTResponse) (*LoginResponse, error) {
+
+	fmt.Print("VerifyPasswordAndCompleteLogin is starting...")
+
 	// Create a censored version of the email for logging
 	censoredEmail := censorEmail(email)
 
@@ -254,12 +258,14 @@ func (c *Client) VerifyPasswordAndCompleteLogin(email, password string, ottRespo
 		MasterKey:  masterKey,
 		PrivateKey: privateKey,
 	}
-	// fmt.Printf("VerifyPasswordAndCompleteLogin: Successfully decrypted and stored keys for email %s\n", censoredEmail) // Optional success log with censored email
+	fmt.Printf("VerifyPasswordAndCompleteLogin: Successfully decrypted and stored keys for email %s\n", censoredEmail) // Optional success log with censored email
+	fmt.Println("VerifyPasswordAndCompleteLogin is starting to decrypt the challenge using the master key...")
 
 	// Step 6: Decrypt the challenge using the master key
-	decryptedChallenge, err := decryptData(encryptedChallenge, masterKey)
+	decryptedChallenge, err := decryptData(encryptedChallenge, masterKey) //TODO: DEVELOPERS NOTE: FIGURE OUT WHY THIS ERRORS
 	if err != nil {
 		// Added censored email and length of challenge tried to decrypt
+		fmt.Printf("VerifyPasswordAndCompleteLogin failed to decrypt the challenge using the master key, the encryptedChallenge is: %v\n", encryptedChallenge)
 		return nil, fmt.Errorf("VerifyPasswordAndCompleteLogin: failed to decrypt server challenge (len %d, challengeId %s) using master key for email %s: %w", len(encryptedChallenge), ottResponse.ChallengeID, censoredEmail, err)
 	}
 

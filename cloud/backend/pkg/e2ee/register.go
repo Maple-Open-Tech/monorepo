@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io" // Use io instead of deprecated io/ioutil
 	"net/http"
 )
 
@@ -118,7 +118,8 @@ func (c *Client) PrepareRegistration(
 // 1. Generates all necessary keys (via PrepareRegistration)
 // 2. Creates the registration payload (via PrepareRegistration)
 // 3. Sends the registration request to the server
-// 4. Returns the recovery key for the user to save
+// 4. Stores relevant E2EE state on the client upon success
+// 5. Returns the recovery key for the user to save
 func (c *Client) Register(
 	// --- Authentication ---
 	email, password string,
@@ -138,14 +139,45 @@ func (c *Client) Register(
 		return "", fmt.Errorf("failed to prepare registration: %v", err)
 	}
 
-	// Store the keys in the client
+	// Store the raw keys temporarily (will be persisted if registration succeeds)
+	// These keys are needed for immediate client-side operations.
 	c.Keys = keySet
 
 	// Send the registration request
-	_, err = sendRegistrationRequest(c.Config, payload) // Assuming sendRegistrationRequest takes *RegistrationPayload
+	_, err = sendRegistrationRequest(c.Config, payload)
 	if err != nil {
+		// If registration fails, clear the temporarily stored keys
+		c.Keys = nil
 		return "", fmt.Errorf("failed to send registration: %v", err)
 	}
+
+	// --- Store E2EE fields from the payload on successful registration ---
+	// These fields represent the state sent to the server and may be needed
+	// for future operations or client state persistence.
+	// Assuming Client struct has fields like:
+	// Salt string // Base64 encoded salt used for KDF
+	// StoredPublicKey string // Base64 encoded public key
+	// StoredEncryptedMasterKey string // Base64 encoded master key encrypted with KEK
+	// StoredEncryptedPrivateKey string // Base64 encoded private key encrypted with master key
+	// StoredEncryptedRecoveryKey string // Base64 encoded recovery key encrypted with master key
+	// StoredMasterKeyEncryptedWithRecoveryKey string // Base64 encoded master key encrypted with recovery key
+	// StoredVerificationID string // Verification ID derived from public key
+
+	c.Salt = payload.Salt
+	c.StoredPublicKey = payload.PublicKey
+	c.StoredEncryptedMasterKey = payload.EncryptedMasterKey
+	c.StoredEncryptedPrivateKey = payload.EncryptedPrivateKey
+	c.StoredEncryptedRecoveryKey = payload.EncryptedRecoveryKey
+	c.StoredMasterKeyEncryptedWithRecoveryKey = payload.MasterKeyEncryptedWithRecoveryKey
+	c.StoredVerificationID = payload.VerificationID
+
+	// Optionally, persist the entire client state (including c.Keys and the stored fields above)
+	// if err := c.SaveState(); err != nil {
+	//     // Log or handle state saving error. Registration succeeded server-side.
+	//     // Depending on requirements, this might warrant specific handling.
+	//     log.Printf("Warning: failed to save client state after successful registration: %v", err)
+	// }
+	// --- End of storing E2EE fields ---
 
 	// Return the recovery key as a base64 string for the user to save
 	recoveryKeyString := base64.StdEncoding.EncodeToString(keySet.RecoveryKey)
@@ -157,7 +189,7 @@ func (c *Client) Register(
 func (c *Client) GetRecoveryKeyInfo(recoveryKeyString string) string {
 	return `
 ===================================================================
-				   	⚠️ IMPORTANT ⚠️
+								⚠️ IMPORTANT ⚠️
 ===================================================================
 Save your recovery key in a secure location. This is shown ONLY ONCE:
 
@@ -210,15 +242,17 @@ func sendRegistrationRequest(config ClientConfig, payload *RegistrationPayload) 
 	defer resp.Body.Close()
 
 	// Read response
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body) // Use io.ReadAll instead of deprecated ioutil.ReadAll
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %v", err)
 	}
 
 	// Check response status
 	if resp.StatusCode != http.StatusCreated {
+		// Consider providing more context from the body if possible
+		// e.g., attempt to unmarshal body into an error struct
 		return nil, fmt.Errorf("registration failed with status %d: %s",
-			resp.StatusCode, body)
+			resp.StatusCode, string(body)) // Convert body to string for readability
 	}
 
 	return body, nil

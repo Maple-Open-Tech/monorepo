@@ -210,6 +210,9 @@ func (s *gatewayVerifyLoginOTTServiceImpl) Execute(sessCtx context.Context, req 
 // In a real implementation, this would use proper encryption but for demonstration
 // we'll just return the base64 encoded challenge
 func getEncryptedChallenge(challenge []byte, user *domain.FederatedUser) string {
+	//#################################################################
+	//TODO: PLEASE IMPLEMENT REAL ENCRYPTION BEFORE SENDING TO CLIENT
+	//#################################################################
 	// In a real implementation, we would encrypt the challenge using public key cryptography
 	// For demonstration, we'll just base64 encode it and assume it gets encrypted
 	return base64.StdEncoding.EncodeToString(challenge)

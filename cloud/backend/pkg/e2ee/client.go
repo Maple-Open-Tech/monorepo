@@ -16,8 +16,15 @@ func defaultHTTPClient() HTTPClient {
 
 // Client is the main struct for interacting with the E2EE system
 type Client struct {
-	Config ClientConfig
-	Keys   *KeySet
+	Config                                  ClientConfig
+	Keys                                    *KeySet
+	Salt                                    string
+	StoredPublicKey                         string
+	StoredEncryptedMasterKey                string
+	StoredEncryptedPrivateKey               string
+	StoredEncryptedRecoveryKey              string
+	StoredMasterKeyEncryptedWithRecoveryKey string
+	StoredVerificationID                    string
 }
 
 // NewClient creates a new E2EE client with the provided configuration
@@ -26,6 +33,8 @@ func NewClient(config ClientConfig) *Client {
 		config.ServerURL = DefaultServerURL
 	}
 
+	// Note: The new fields (Salt, Stored*, etc.) will have their zero values initially.
+	// They are expected to be populated later, e.g., during registration or login.
 	return &Client{
 		Config: config,
 	}

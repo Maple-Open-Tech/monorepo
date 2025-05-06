@@ -18,6 +18,7 @@ func ClientCmd() *cobra.Command {
 	cmd.AddCommand(LoginUserCmd())
 	cmd.AddCommand(HealthCheckCmd())
 	cmd.AddCommand(EchoCmd())
+	cmd.AddCommand(VerifyEmailCmd())
 
 	return cmd
 }

@@ -129,7 +129,7 @@ func (s *gatewayRequestLoginOTTServiceImpl) Execute(sessCtx context.Context, req
 
 	// Send OTT via email
 	// 1=IPE
-	if err := s.sendOTTEmailUseCase.Execute(sessCtx, 1, user.FirstName, user.Email, ott); err != nil {
+	if err := s.sendOTTEmailUseCase.Execute(sessCtx, 1, user.Email, ott, user.FirstName); err != nil {
 		s.logger.Error("Failed to send OTT email", zap.Error(err))
 		return nil, fmt.Errorf("failed to send login code: %w", err)
 	}

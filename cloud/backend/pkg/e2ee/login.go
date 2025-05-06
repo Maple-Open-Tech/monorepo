@@ -261,8 +261,15 @@ func (c *Client) VerifyPasswordAndCompleteLogin(email, password string, ottRespo
 	fmt.Printf("VerifyPasswordAndCompleteLogin: Successfully decrypted and stored keys for email %s\n", censoredEmail) // Optional success log with censored email
 	fmt.Println("VerifyPasswordAndCompleteLogin is starting to decrypt the challenge using the master key...")
 
+	// DEVELOPERS NOTE:
+	// Please see `cloud/backend/internal/iam/service/gateway/verifyott.go` and `getEncryptedChallenge`.
+	// We need to decrypt the `EncryptedPrivateKey` from `GatewayVerifyLoginOTTResponseIDO` and utilize
+	// our private key to decrypt the `encryptedChallenge`. If we successfully decrypted then we can
+	// use the `ChallengeID` to submit and complete.
+	// TODO: ON BACKEND YOU MUST ENCRYPT WITH PUBLIC KEY FOR THE USER!
+
 	// Step 6: Decrypt the challenge using the master key
-	decryptedChallenge, err := decryptData(encryptedChallenge, masterKey) //TODO: DEVELOPERS NOTE: FIGURE OUT WHY THIS ERRORS
+	decryptedChallenge, err := decryptData(encryptedChallenge, privateKey) //TODO: DEVELOPERS NOTE: FIGURE OUT WHY THIS ERRORS
 	if err != nil {
 		// Added censored email and length of challenge tried to decrypt
 		fmt.Printf("VerifyPasswordAndCompleteLogin failed to decrypt the challenge using the master key, the encryptedChallenge is: %v\n", encryptedChallenge)

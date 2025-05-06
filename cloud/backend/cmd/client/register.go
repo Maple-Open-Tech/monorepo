@@ -89,7 +89,6 @@ Examples:
 }
 
 // registerUser handles the actual user registration logic.
-// TODO: Fully implement the use of all parameters in the registration process.
 func registerUser(email, plainPassword, firstName, lastName, timezone, country, phone, betaAccessCode string, agreeTerms, agreePromotions, agreeTracking bool, module int) error { // Added module parameter
 	cfg := config.NewProvider()
 

@@ -1,5 +1,7 @@
 package e2ee
 
+import "time"
+
 // RegistrationPayload contains all data sent to the server during registration
 // All sensitive data is encrypted before being added to this struct
 type RegistrationPayload struct {
@@ -35,6 +37,11 @@ type KeySet struct {
 	PublicKey   []byte // Public key (can be shared)
 	PrivateKey  []byte // Private key (must be kept secret)
 	RecoveryKey []byte // Backup key for account recovery
+
+	// Authentication tokens upon successfull login
+	AccessToken  string    // JWT access token
+	RefreshToken string    // JWT refresh token
+	TokenExpiry  time.Time // When the access token expires
 }
 
 // ClientConfig holds the configuration for the E2EE client

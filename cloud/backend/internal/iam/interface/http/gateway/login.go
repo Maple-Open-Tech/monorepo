@@ -9,9 +9,8 @@ import (
 	"strings"
 	_ "time/tzdata"
 
-	"go.uber.org/zap"
-
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/interface/http/middleware"
 	sv_gateway "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/service/gateway"

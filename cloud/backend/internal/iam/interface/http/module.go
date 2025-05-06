@@ -18,7 +18,7 @@ func Module() fx.Option {
 			unifiedhttp.AsRoute(commonhttp.NewGetMapleSendVersionHTTPHandler),
 			unifiedhttp.AsRoute(gateway.NewGatewayFederatedUserRegisterHTTPHandler),
 			unifiedhttp.AsRoute(gateway.NewGatewayVerifyEmailHTTPHandler),
-			// unifiedhttp.AsRoute(gateway.NewGatewayLoginHTTPHandler),
+			unifiedhttp.AsRoute(gateway.NewGatewayLoginHTTPHandler),
 			// unifiedhttp.AsRoute(gateway.NewGatewayLogoutHTTPHandler),
 			// unifiedhttp.AsRoute(gateway.NewGatewayRefreshTokenHTTPHandler),
 			// unifiedhttp.AsRoute(gateway.NewGatewayResetPasswordHTTPHandler),

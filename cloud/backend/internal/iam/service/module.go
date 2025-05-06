@@ -14,7 +14,7 @@ func Module() fx.Option {
 			token.NewTokenGetSessionService,
 			gateway.NewGatewayFederatedUserRegisterService,
 			gateway.NewGatewayVerifyEmailService,
-			// gateway.NewGatewayLoginService,
+			gateway.NewGatewayLoginService,
 			// gateway.NewGatewayLogoutService,
 			// gateway.NewGatewaySendVerifyEmailService,
 			// gateway.NewGatewayRefreshTokenService,

@@ -14,11 +14,10 @@ func ClientCmd() *cobra.Command {
 	}
 
 	// Add rcca-related commands
-	cmd.AddCommand(RegisterUserCmd())
-	cmd.AddCommand(LoginUserCmd())
 	cmd.AddCommand(HealthCheckCmd())
-	cmd.AddCommand(EchoCmd())
+	cmd.AddCommand(RegisterUserCmd())
 	cmd.AddCommand(VerifyEmailCmd())
-
+	cmd.AddCommand(LoginUserCmd())
+	cmd.AddCommand(EchoCmd())
 	return cmd
 }

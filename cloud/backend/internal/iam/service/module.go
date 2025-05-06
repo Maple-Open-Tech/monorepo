@@ -1,3 +1,4 @@
+// cloud/backend/internal/iam/service/module.go
 package service
 
 import (
@@ -14,10 +15,16 @@ func Module() fx.Option {
 			token.NewTokenGetSessionService,
 			gateway.NewGatewayFederatedUserRegisterService,
 			gateway.NewGatewayVerifyEmailService,
+			// Add the new E2EE login services
+			gateway.NewGatewayRequestLoginOTTService,
+			gateway.NewGatewayVerifyLoginOTTService,
+			gateway.NewGatewayCompleteLoginService,
+			// Keep the original login service for backward compatibility if needed
 			gateway.NewGatewayLoginService,
-			// gateway.NewGatewayLogoutService,
+			// Other services
+			gateway.NewGatewayLogoutService,
 			// gateway.NewGatewaySendVerifyEmailService,
-			// gateway.NewGatewayRefreshTokenService,
+			gateway.NewGatewayRefreshTokenService,
 			// gateway.NewGatewayResetPasswordService,
 			// gateway.NewGatewayForgotPasswordService,
 			// me.NewGetMeService,

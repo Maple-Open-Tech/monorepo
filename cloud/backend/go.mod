@@ -7,6 +7,7 @@ require (
 	github.com/bsm/redislock v0.9.4
 	github.com/faabiosr/cachego v0.26.0
 	github.com/golang-jwt/jwt/v5 v5.2.2
+	github.com/google/uuid v1.6.0
 	github.com/mailgun/mailgun-go/v4 v4.23.0
 	github.com/oschwald/geoip2-golang v1.11.0
 	github.com/redis/go-redis/v9 v9.7.3

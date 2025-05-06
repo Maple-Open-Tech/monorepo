@@ -2,16 +2,10 @@ package gateway
 
 import (
 	"context"
-	"fmt"
-	"strings"
-	"time"
 
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
 	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/usecase/federateduser"
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/jwt"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/password"
-	sstring "github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/securestring"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/storage/database/mongodbcache"
 )
 
@@ -49,102 +43,103 @@ type GatewayResetPasswordResponseIDO struct {
 }
 
 func (s *gatewayResetPasswordServiceImpl) Execute(sessCtx context.Context, req *GatewayResetPasswordRequestIDO) (*GatewayResetPasswordResponseIDO, error) {
-	ipAddress, _ := sessCtx.Value(constants.SessionIPAddress).(string)
+	return nil, nil
+	// ipAddress, _ := sessCtx.Value(constants.SessionIPAddress).(string)
 
-	//
-	// STEP 1: Sanization of input.
-	//
+	// //
+	// // STEP 1: Sanization of input.
+	// //
 
-	// Defensive Code: For security purposes we need to perform some sanitization on the inputs.
-	req.Email = strings.ToLower(req.Email)
-	req.Email = strings.ReplaceAll(req.Email, " ", "")
-	req.Email = strings.ReplaceAll(req.Email, "\t", "")
-	req.Email = strings.TrimSpace(req.Email)
+	// // Defensive Code: For security purposes we need to perform some sanitization on the inputs.
+	// req.Email = strings.ToLower(req.Email)
+	// req.Email = strings.ReplaceAll(req.Email, " ", "")
+	// req.Email = strings.ReplaceAll(req.Email, "\t", "")
+	// req.Email = strings.TrimSpace(req.Email)
 
-	//
-	// STEP 2: Validation of input.
-	//
+	// //
+	// // STEP 2: Validation of input.
+	// //
 
-	e := make(map[string]string)
-	if req.Email == "" {
-		e["email"] = "Email address is required"
-	}
-	if len(req.Email) > 255 {
-		e["email"] = "too long"
-	}
-	if req.Password == "" {
-		e["password"] = "missing value"
-	}
-	if req.PasswordConfirm == "" {
-		e["password_confirm"] = "missing value"
-	}
-	if req.PasswordConfirm != req.Password {
-		e["password"] = "does not match"
-		e["password_confirm"] = "does not match"
-	}
+	// e := make(map[string]string)
+	// if req.Email == "" {
+	// 	e["email"] = "Email address is required"
+	// }
+	// if len(req.Email) > 255 {
+	// 	e["email"] = "too long"
+	// }
+	// if req.Password == "" {
+	// 	e["password"] = "missing value"
+	// }
+	// if req.PasswordConfirm == "" {
+	// 	e["password_confirm"] = "missing value"
+	// }
+	// if req.PasswordConfirm != req.Password {
+	// 	e["password"] = "does not match"
+	// 	e["password_confirm"] = "does not match"
+	// }
 
-	if len(e) != 0 {
-		return nil, httperror.NewForBadRequest(&e)
-	}
+	// if len(e) != 0 {
+	// 	return nil, httperror.NewForBadRequest(&e)
+	// }
 
-	//
-	// STEP 3:
-	//
+	// //
+	// // STEP 3:
+	// //
 
-	// Lookup the user in our database, else return a `400 Bad Request` error.
-	u, err := s.userGetByEmailUseCase.Execute(sessCtx, req.Email)
-	if err != nil {
-		return nil, err
-	}
-	if u == nil {
-		return nil, httperror.NewForBadRequestWithSingleField("email", "Email address does not exist")
-	}
+	// // Lookup the user in our database, else return a `400 Bad Request` error.
+	// u, err := s.userGetByEmailUseCase.Execute(sessCtx, req.Email)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// if u == nil {
+	// 	return nil, httperror.NewForBadRequestWithSingleField("email", "Email address does not exist")
+	// }
 
-	//
-	// STEP 4:
-	//
+	// //
+	// // STEP 4:
+	// //
 
-	if req.Code != u.PasswordResetVerificationCode {
-		return nil, httperror.NewForBadRequestWithSingleField("code", "Verification code is incorrect")
+	// if req.Code != u.PasswordResetVerificationCode {
+	// 	return nil, httperror.NewForBadRequestWithSingleField("code", "Verification code is incorrect")
 
-	}
-	if time.Now().After(u.PasswordResetVerificationExpiry) {
-		return nil, httperror.NewForBadRequestWithSingleField("code", "Verification code has expired")
-	}
+	// }
+	// if time.Now().After(u.PasswordResetVerificationExpiry) {
+	// 	return nil, httperror.NewForBadRequestWithSingleField("code", "Verification code has expired")
+	// }
 
-	//
-	// STEP 4: Hash the password and update the user's password in the database.
-	//
+	// //
+	// // STEP 4: Hash the password and update the user's password in the database.
+	// //
 
-	password, err := sstring.NewSecureString(req.Password)
-	if err != nil {
-		return nil, err
-	}
-	defer password.Wipe()
+	// password, err := sstring.NewSecureString(req.Password)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// defer password.Wipe()
 
-	passwordHash, err := s.passwordProvider.GenerateHashFromPassword(password)
-	if err != nil {
-		return nil, err
-	}
+	// passwordHash, err := s.passwordProvider.GenerateHashFromPassword(password)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	u.PasswordHash = passwordHash
-	u.PasswordHashAlgorithm = s.passwordProvider.AlgorithmName()
-	u.PasswordResetVerificationCode = ""
-	u.PasswordResetVerificationExpiry = time.Time{} // This is equivalent to not-set time
-	u.ModifiedAt = time.Now()
-	u.ModifiedByName = fmt.Sprintf("%s %s", u.FirstName, u.LastName)
-	u.ModifiedFromIPAddress = ipAddress
-	err = s.userUpdateUseCase.Execute(sessCtx, u)
-	if err != nil {
-		return nil, err
-	}
+	// // u.PasswordHash = passwordHash
+	// // u.PasswordHashAlgorithm = s.passwordProvider.AlgorithmName()
+	// u.PasswordResetVerificationCode = ""
+	// u.PasswordResetVerificationExpiry = time.Time{} // This is equivalent to not-set time
+	// u.ModifiedAt = time.Now()
+	// u.ModifiedByName = fmt.Sprintf("%s %s", u.FirstName, u.LastName)
+	// u.ModifiedFromIPAddress = ipAddress
+	// err = s.userUpdateUseCase.Execute(sessCtx, u)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	//
-	// STEP 5: Done
-	//
+	// //
+	// // STEP 5: Done
+	// //
 
-	// Return our auth keys.
-	return &GatewayResetPasswordResponseIDO{
-		Message: "Password reset email has been sent",
-	}, nil
+	// // Return our auth keys.
+	// return &GatewayResetPasswordResponseIDO{
+	// 	Message: "Password reset email has been sent",
+	// }, nil
 }

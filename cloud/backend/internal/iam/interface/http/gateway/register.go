@@ -94,8 +94,6 @@ func (h *GatewayFederatedUserRegisterHTTPHandler) Execute(w http.ResponseWriter,
 
 	session, err := h.dbClient.StartSession()
 	if err != nil {
-		h.logger.Error("start session error",
-			zap.Any("error", err))
 		httperror.ResponseError(w, err)
 		return
 	}
@@ -113,8 +111,6 @@ func (h *GatewayFederatedUserRegisterHTTPHandler) Execute(w http.ResponseWriter,
 	// Start a transaction
 	_, txErr := session.WithTransaction(ctx, transactionFunc)
 	if txErr != nil {
-		h.logger.Error("session failed error",
-			zap.Any("error", txErr))
 		httperror.ResponseError(w, txErr)
 		return
 	}

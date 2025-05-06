@@ -19,8 +19,6 @@ func Module() fx.Option {
 			gateway.NewGatewayRequestLoginOTTService,
 			gateway.NewGatewayVerifyLoginOTTService,
 			gateway.NewGatewayCompleteLoginService,
-			// Keep the original login service for backward compatibility if needed
-			gateway.NewGatewayLoginService,
 			// Other services
 			gateway.NewGatewayLogoutService,
 			// gateway.NewGatewaySendVerifyEmailService,

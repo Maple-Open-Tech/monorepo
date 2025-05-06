@@ -23,8 +23,6 @@ func Module() fx.Option {
 			unifiedhttp.AsRoute(gateway.NewGatewayRequestLoginOTTHTTPHandler),
 			unifiedhttp.AsRoute(gateway.NewGatewayVerifyLoginOTTHTTPHandler),
 			unifiedhttp.AsRoute(gateway.NewGatewayCompleteLoginHTTPHandler),
-			// Keep the original login handler for backward compatibility if needed
-			unifiedhttp.AsRoute(gateway.NewGatewayLoginHTTPHandler),
 			// Other handlers
 			unifiedhttp.AsRoute(gateway.NewGatewayLogoutHTTPHandler),
 			unifiedhttp.AsRoute(gateway.NewGatewayRefreshTokenHTTPHandler),

@@ -4,14 +4,18 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
+	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/domain/federateduser"
 	uc_emailer "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/usecase/emailer"
 	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/usecase/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/random"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/jwt"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/password"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/storage/database/mongodbcache"
@@ -177,91 +181,87 @@ func (svc *gatewayFederatedUserRegisterServiceImpl) Execute(
 	if u != nil {
 		return httperror.NewForBadRequestWithSingleField("email", "Email address already exists")
 	}
-	fmt.Println("DONE!")
-	// // Create our federateduser.
-	// u, err = s.createCustomerFederatedUserForRequest(sessCtx, req)
-	// if err != nil {
-	// 	return err
-	// }
+	// Create our federateduser.
+	u, err = svc.createCustomerFederatedUserForRequest(sessCtx, req)
+	if err != nil {
+		return err
+	}
 
-	// if err := s.sendFederatedUserVerificationEmailUseCase.Execute(context.Background(), req.Module, u); err != nil {
-	// 	return err
-	// }
+	if err := svc.sendFederatedUserVerificationEmailUseCase.Execute(context.Background(), req.Module, u); err != nil {
+		return err
+	}
 
 	return nil
 }
 
-// func (s *gatewayFederatedUserRegisterServiceImpl) createCustomerFederatedUserForRequest(sessCtx context.Context, req *RegisterCustomerRequestIDO) (*domain.FederatedUser, error) {
+func (s *gatewayFederatedUserRegisterServiceImpl) createCustomerFederatedUserForRequest(sessCtx context.Context, req *RegisterCustomerRequestIDO) (*dom_user.FederatedUser, error) {
 
-// 	password, err := sstring.NewSecureString(req.Password)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer password.Wipe()
+	ipAddress, _ := sessCtx.Value(constants.SessionIPAddress).(string)
 
-// 	passwordHash, err := s.passwordProvider.GenerateHashFromPassword(password)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+	emailVerificationCode, err := random.GenerateSixDigitCode()
+	if err != nil {
+		return nil, err
+	}
 
-// 	ipAddress, _ := sessCtx.Value(constants.SessionIPAddress).(string)
+	userID := primitive.NewObjectID()
+	u := &dom_user.FederatedUser{
+		// --- E2EE ---
+		Salt:                              req.Salt,
+		PublicKey:                         req.PublicKey,
+		EncryptedMasterKey:                req.EncryptedMasterKey,
+		EncryptedPrivateKey:               req.EncryptedPrivateKey,
+		EncryptedRecoveryKey:              req.EncryptedRecoveryKey,
+		MasterKeyEncryptedWithRecoveryKey: req.MasterKeyEncryptedWithRecoveryKey,
+		VerificationID:                    req.VerificationID,
 
-// 	emailVerificationCode, err := random.GenerateSixDigitCode()
-// 	if err != nil {
-// 		return nil, err
-// 	}
+		// --- The rest of the stuff... ---
+		ID:                  userID,
+		FirstName:           req.FirstName,
+		LastName:            req.LastName,
+		Name:                fmt.Sprintf("%s %s", req.FirstName, req.LastName),
+		LexicalName:         fmt.Sprintf("%s, %s", req.LastName, req.FirstName),
+		Email:               req.Email,
+		Role:                dom_user.FederatedUserRoleIndividual,
+		Phone:               req.Phone,
+		Country:             req.Country,
+		Timezone:            req.Timezone,
+		Region:              "",
+		City:                "",
+		PostalCode:          "",
+		AddressLine1:        "",
+		AddressLine2:        "",
+		AgreeTermsOfService: req.AgreeTermsOfService,
+		AgreePromotions:     req.AgreePromotions,
+		AgreeToTrackingAcrossThirdPartyAppsAndServices: req.AgreeToTrackingAcrossThirdPartyAppsAndServices,
+		CreatedByUserID:         userID,
+		CreatedAt:               time.Now(),
+		CreatedByName:           fmt.Sprintf("%s %s", req.FirstName, req.LastName),
+		CreatedFromIPAddress:    ipAddress,
+		ModifiedByUserID:        userID,
+		ModifiedAt:              time.Now(),
+		ModifiedByName:          fmt.Sprintf("%s %s", req.FirstName, req.LastName),
+		ModifiedFromIPAddress:   ipAddress,
+		WasEmailVerified:        false,
+		EmailVerificationCode:   fmt.Sprintf("%s", emailVerificationCode),
+		EmailVerificationExpiry: time.Now().Add(72 * time.Hour),
+		Status:                  dom_user.FederatedUserStatusActive,
+		HasShippingAddress:      false,
+		ShippingName:            "",
+		ShippingPhone:           "",
+		ShippingCountry:         "",
+		ShippingRegion:          "",
+		ShippingCity:            "",
+		ShippingPostalCode:      "",
+		ShippingAddressLine1:    "",
+		ShippingAddressLine2:    "",
+	}
+	if req.CountryOther != "" {
+		u.Country = req.CountryOther
+	}
+	err = s.userCreateUseCase.Execute(sessCtx, u)
+	if err != nil {
+		return nil, err
+	}
 
-// 	userID := primitive.NewObjectID()
-// 	u := &domain.FederatedUser{
-// 		ID:                    userID,
-// 		FirstName:             req.FirstName,
-// 		LastName:              req.LastName,
-// 		Name:                  fmt.Sprintf("%s %s", req.FirstName, req.LastName),
-// 		LexicalName:           fmt.Sprintf("%s, %s", req.LastName, req.FirstName),
-// 		Email:                 req.Email,
-// 		PasswordHash:          passwordHash,
-// 		PasswordHashAlgorithm: s.passwordProvider.AlgorithmName(),
-// 		Role:                  domain.FederatedUserRoleIndividual,
-// 		Phone:                 req.Phone,
-// 		Country:               req.Country,
-// 		Timezone:              req.Timezone,
-// 		Region:                "",
-// 		City:                  "",
-// 		PostalCode:            "",
-// 		AddressLine1:          "",
-// 		AddressLine2:          "",
-// 		AgreeTermsOfService:   req.AgreeTermsOfService,
-// 		AgreePromotions:       req.AgreePromotions,
-// 		AgreeToTrackingAcrossThirdPartyAppsAndServices: req.AgreeToTrackingAcrossThirdPartyAppsAndServices,
-// 		CreatedByUserID:         userID,
-// 		CreatedAt:               time.Now(),
-// 		CreatedByName:           fmt.Sprintf("%s %s", req.FirstName, req.LastName),
-// 		CreatedFromIPAddress:    ipAddress,
-// 		ModifiedByUserID:        userID,
-// 		ModifiedAt:              time.Now(),
-// 		ModifiedByName:          fmt.Sprintf("%s %s", req.FirstName, req.LastName),
-// 		ModifiedFromIPAddress:   ipAddress,
-// 		WasEmailVerified:        false,
-// 		EmailVerificationCode:   fmt.Sprintf("%s", emailVerificationCode),
-// 		EmailVerificationExpiry: time.Now().Add(72 * time.Hour),
-// 		Status:                  domain.FederatedUserStatusActive,
-// 		HasShippingAddress:      false,
-// 		ShippingName:            "",
-// 		ShippingPhone:           "",
-// 		ShippingCountry:         "",
-// 		ShippingRegion:          "",
-// 		ShippingCity:            "",
-// 		ShippingPostalCode:      "",
-// 		ShippingAddressLine1:    "",
-// 		ShippingAddressLine2:    "",
-// 	}
-// 	if req.CountryOther != "" {
-// 		u.Country = req.CountryOther
-// 	}
-// 	err = s.userCreateUseCase.Execute(sessCtx, u)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return u, nil
-// }
+	return u, nil
+}

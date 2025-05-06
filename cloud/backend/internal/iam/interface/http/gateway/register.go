@@ -115,5 +115,13 @@ func (h *GatewayFederatedUserRegisterHTTPHandler) Execute(w http.ResponseWriter,
 		return
 	}
 
+	// If transaction succeeds, return success response
+	response := map[string]interface{}{
+		"message":           "Registration successful. Please check your email for verification.",
+		"recovery_key_info": "IMPORTANT: Please ensure you have saved your recovery key. It cannot be retrieved later.",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(response)
 }

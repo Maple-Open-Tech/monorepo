@@ -66,7 +66,7 @@ func logoutUser() error {
 		req.Header.Set("Authorization", "JWT "+tokens.AccessToken)
 
 		// Send request
-		httpClient := defaultHTTPClient()
+		httpClient := &http.Client{} // Use standard HTTP client instead of defaultHTTPClient
 		resp, err := httpClient.Do(req)
 		if err != nil {
 			// Log the error but continue with local logout

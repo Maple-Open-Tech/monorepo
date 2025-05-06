@@ -10,6 +10,8 @@ import (
 	"net/http" // Added for potential future use if needed, matching ioutil deprecation recommendation
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/nacl/box"
 )
 
 // LoginOTTRequest is the payload to request a one-time token
@@ -200,6 +202,48 @@ func censorEmail(email string) string {
 	return localPart[:prefixLen] + "***@" + domainPart
 }
 
+// Add this helper function to the client code:
+func decryptChallengeWithPrivateKey(encryptedChallengeBase64 string, privateKey []byte) ([]byte, error) {
+	// Decode the base64 challenge
+	encryptedData, err := base64.StdEncoding.DecodeString(encryptedChallengeBase64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode base64 challenge: %w", err)
+	}
+
+	// We need at least 56 bytes (32 for ephemeral pubkey + 24 for nonce)
+	if len(encryptedData) < 56 {
+		return nil, fmt.Errorf("encrypted data too short, expected at least 56 bytes, got %d", len(encryptedData))
+	}
+
+	// Extract the ephemeral public key
+	var ephemeralPub [32]byte
+	copy(ephemeralPub[:], encryptedData[:32])
+
+	// Extract the nonce
+	var nonce [24]byte
+	copy(nonce[:], encryptedData[32:56])
+
+	// Prepare private key in correct format
+	var privKey [32]byte
+	copy(privKey[:], privateKey)
+
+	// Decrypt the message
+	decrypted, ok := box.Open(nil, encryptedData[56:], &nonce, &ephemeralPub, &privKey)
+	if !ok {
+		return nil, fmt.Errorf("failed to decrypt challenge")
+	}
+
+	return decrypted, nil
+}
+
+// Helper function to find minimum of two ints
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 // VerifyPasswordAndCompleteLogin verifies password locally and completes the login
 func (c *Client) VerifyPasswordAndCompleteLogin(email, password string, ottResponse *VerifyOTTResponse) (*LoginResponse, error) {
 
@@ -223,11 +267,6 @@ func (c *Client) VerifyPasswordAndCompleteLogin(email, password string, ottRespo
 	encryptedPrivateKey, err := base64.StdEncoding.DecodeString(ottResponse.EncryptedPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("VerifyPasswordAndCompleteLogin: failed to decode base64 encrypted private key (len %d) for email %s: %w", len(ottResponse.EncryptedPrivateKey), censoredEmail, err)
-	}
-
-	encryptedChallenge, err := base64.StdEncoding.DecodeString(ottResponse.EncryptedChallenge)
-	if err != nil {
-		return nil, fmt.Errorf("VerifyPasswordAndCompleteLogin: failed to decode base64 encrypted challenge (len %d) for email %s: %w", len(ottResponse.EncryptedChallenge), censoredEmail, err)
 	}
 
 	// Step 2: Derive the key encryption key from the password
@@ -259,22 +298,26 @@ func (c *Client) VerifyPasswordAndCompleteLogin(email, password string, ottRespo
 		PrivateKey: privateKey,
 	}
 	fmt.Printf("VerifyPasswordAndCompleteLogin: Successfully decrypted and stored keys for email %s\n", censoredEmail) // Optional success log with censored email
-	fmt.Println("VerifyPasswordAndCompleteLogin is starting to decrypt the challenge using the master key...")
+	fmt.Println("VerifyPasswordAndCompleteLogin is starting to decrypt the encrypted challenge...")
 
-	// DEVELOPERS NOTE:
-	// Please see `cloud/backend/internal/iam/service/gateway/verifyott.go` and `getEncryptedChallenge`.
-	// We need to decrypt the `EncryptedPrivateKey` from `GatewayVerifyLoginOTTResponseIDO` and utilize
-	// our private key to decrypt the `encryptedChallenge`. If we successfully decrypted then we can
-	// use the `ChallengeID` to submit and complete.
-	// TODO: ON BACKEND YOU MUST ENCRYPT WITH PUBLIC KEY FOR THE USER!
+	// Step 6: Decrypt the challenge
+	fmt.Println("Starting challenge decryption with these values:")
+	fmt.Printf("- Challenge ID: %s\n", ottResponse.ChallengeID)
+	fmt.Printf("- EncryptedChallenge (base64) length: %d\n", len(ottResponse.EncryptedChallenge))
+	fmt.Printf("- Private key length: %d\n", len(privateKey))
 
-	// Step 6: Decrypt the challenge using the master key
-	decryptedChallenge, err := decryptData(encryptedChallenge, privateKey) //TODO: DEVELOPERS NOTE: FIGURE OUT WHY THIS ERRORS
+	// Use the original base64 string, not the decoded bytes
+	decryptedChallenge, err := decryptChallengeWithPrivateKey(ottResponse.EncryptedChallenge, privateKey)
 	if err != nil {
-		// Added censored email and length of challenge tried to decrypt
-		fmt.Printf("VerifyPasswordAndCompleteLogin failed to decrypt the challenge using the master key, the encryptedChallenge is: %v\n", encryptedChallenge)
-		return nil, fmt.Errorf("VerifyPasswordAndCompleteLogin: failed to decrypt server challenge (len %d, challengeId %s) using master key for email %s: %w", len(encryptedChallenge), ottResponse.ChallengeID, censoredEmail, err)
+		fmt.Printf("DECRYPTION ERROR: %v\n", err)
+		// More detailed debugging info
+		fmt.Printf("- Original challenge string (first 20 chars): %s\n",
+			ottResponse.EncryptedChallenge[:min(20, len(ottResponse.EncryptedChallenge))])
+		return nil, fmt.Errorf("VerifyPasswordAndCompleteLogin: failed to decrypt server challenge (base64 len %d, challengeId %s) using private key for email %s: %w",
+			len(ottResponse.EncryptedChallenge), ottResponse.ChallengeID, censoredEmail, err)
 	}
+
+	fmt.Printf("Successfully decrypted challenge (length: %d bytes)\n", len(decryptedChallenge))
 
 	// Step 7: Create the complete login request with the decrypted challenge
 	completeLoginPayload := &CompleteLoginRequest{

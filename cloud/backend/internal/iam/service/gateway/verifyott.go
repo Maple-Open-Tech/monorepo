@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/nacl/box"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/domain/federateduser"
@@ -195,25 +196,60 @@ func (s *gatewayVerifyLoginOTTServiceImpl) Execute(sessCtx context.Context, req 
 		}
 	}
 
+	encryptedChallenge, err := getEncryptedChallenge(challenge, user)
+	if err != nil {
+		s.logger.Error("Failed to encrypt challenge", zap.Error(err))
+		return nil, fmt.Errorf("failed to process login: %w", err)
+	}
+
 	// Return encrypted keys and challenge for client-side password verification
 	return &GatewayVerifyLoginOTTResponseIDO{
 		Salt:                user.Salt,
 		PublicKey:           user.PublicKey,
 		EncryptedMasterKey:  user.EncryptedMasterKey,
 		EncryptedPrivateKey: user.EncryptedPrivateKey,
-		EncryptedChallenge:  getEncryptedChallenge(challenge, user),
+		EncryptedChallenge:  encryptedChallenge,
 		ChallengeID:         challengeID,
 	}, nil
 }
 
 // getEncryptedChallenge encrypts the challenge with the user's master key
-// In a real implementation, this would use proper encryption but for demonstration
-// we'll just return the base64 encoded challenge
-func getEncryptedChallenge(challenge []byte, user *domain.FederatedUser) string {
-	//#################################################################
-	//TODO: PLEASE IMPLEMENT REAL ENCRYPTION BEFORE SENDING TO CLIENT
-	//#################################################################
-	// In a real implementation, we would encrypt the challenge using public key cryptography
-	// For demonstration, we'll just base64 encode it and assume it gets encrypted
-	return base64.StdEncoding.EncodeToString(challenge)
+func getEncryptedChallenge(challenge []byte, user *domain.FederatedUser) (string, error) {
+	// Decode the user's public key from base64
+	publicKeyBytes, err := base64.StdEncoding.DecodeString(user.PublicKey)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode user public key: %w", err)
+	}
+
+	// Ensure we have the right length for NaCl box
+	if len(publicKeyBytes) != 32 {
+		return "", fmt.Errorf("invalid public key length: got %d, want 32", len(publicKeyBytes))
+	}
+
+	// Generate a random nonce
+	var nonce [24]byte
+	if _, err := rand.Read(nonce[:]); err != nil {
+		return "", fmt.Errorf("failed to generate nonce: %w", err)
+	}
+
+	// Create a ephemeral keypair for this encryption
+	ephemeralPub, ephemeralPriv, err := box.GenerateKey(rand.Reader)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate ephemeral keypair: %w", err)
+	}
+
+	// Convert the user's public key to the expected format
+	var userPubKey [32]byte
+	copy(userPubKey[:], publicKeyBytes)
+
+	// Encrypt the challenge with box.Seal using the user's public key
+	encrypted := box.Seal(nonce[:], challenge, &nonce, &userPubKey, ephemeralPriv)
+
+	// Prepend the ephemeral public key to the encrypted data
+	result := make([]byte, len(encrypted)+32)
+	copy(result[:32], ephemeralPub[:])
+	copy(result[32:], encrypted)
+
+	// Return base64 encoded result
+	return base64.StdEncoding.EncodeToString(result), nil
 }

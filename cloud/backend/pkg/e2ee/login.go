@@ -6,8 +6,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
+	"io"       // Changed from io/ioutil
+	"net/http" // Added for potential future use if needed, matching ioutil deprecation recommendation
+	"strings"
 	"time"
 )
 
@@ -75,34 +76,42 @@ func (c *Client) RequestLoginOTT(email string) error {
 	// Convert payload to JSON
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("failed to marshal OTT request data: %v", err)
+		return fmt.Errorf("RequestLoginOTT: failed to marshal LoginOTTRequest payload for email %s: %w", censorEmail(email), err)
 	}
 
 	// Create request
 	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return fmt.Errorf("failed to create request: %v", err)
+		return fmt.Errorf("RequestLoginOTT: failed to create POST request for %s: %w", endpoint, err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	// Send request
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to send OTT request: %v", err)
+		return fmt.Errorf("RequestLoginOTT: failed to send request to %s: %w", endpoint, err)
 	}
 	defer resp.Body.Close()
 
 	// Read response
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body) // Changed from ioutil.ReadAll
 	if err != nil {
-		return fmt.Errorf("failed to read response body: %v", err)
+		// Log the status code even if reading the body fails
+		return fmt.Errorf("RequestLoginOTT: failed to read response body from %s (status %d): %w", endpoint, resp.StatusCode, err)
 	}
 
 	// Check response status
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("OTT request failed with status %d: %s",
-			resp.StatusCode, body)
+		return fmt.Errorf("RequestLoginOTT: request to %s failed with status %d: %s",
+			endpoint, resp.StatusCode, string(body))
 	}
+
+	// Optionally log success or parse the LoginOTTResponse if needed
+	// var response LoginOTTResponse
+	// if err := json.Unmarshal(body, &response); err != nil {
+	//     return fmt.Errorf("RequestLoginOTT: failed to parse success response body: %w", err)
+	// }
+	// fmt.Printf("RequestLoginOTT: success: %s\n", response.Message)
 
 	return nil
 }
@@ -112,7 +121,7 @@ func (c *Client) VerifyLoginOTT(email, ott string) (*VerifyOTTResponse, error) {
 	// Create request payload
 	payload := &VerifyOTTRequest{
 		Email: email,
-		OTT:   ott,
+		OTT:   ott, // Be careful not to log the actual OTT value in production logs
 	}
 
 	// Get HTTP client
@@ -131,80 +140,113 @@ func (c *Client) VerifyLoginOTT(email, ott string) (*VerifyOTTResponse, error) {
 	// Convert payload to JSON
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal OTT verification data: %v", err)
+		return nil, fmt.Errorf("VerifyLoginOTT: failed to marshal VerifyOTTRequest payload for email %s: %w", censorEmail(email), err)
 	}
 
 	// Create request
 	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %v", err)
+		return nil, fmt.Errorf("VerifyLoginOTT: failed to create POST request for %s: %w", endpoint, err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	// Send request
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to send OTT verification request: %v", err)
+		return nil, fmt.Errorf("VerifyLoginOTT: failed to send request to %s: %w", endpoint, err)
 	}
 	defer resp.Body.Close()
 
 	// Read response
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body) // Changed from ioutil.ReadAll
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %v", err)
+		// Log the status code even if reading the body fails
+		return nil, fmt.Errorf("VerifyLoginOTT: failed to read response body from %s (status %d): %w", endpoint, resp.StatusCode, err)
 	}
 
 	// Check response status
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("OTT verification failed with status %d: %s",
-			resp.StatusCode, body)
+		return nil, fmt.Errorf("VerifyLoginOTT: request to %s failed with status %d: %s",
+			endpoint, resp.StatusCode, string(body))
 	}
 
 	// Parse the response
 	var response VerifyOTTResponse
 	if err := json.Unmarshal(body, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse OTT verification response: %v", err)
+		// Log the raw body for debugging if unmarshalling fails
+		return nil, fmt.Errorf("VerifyLoginOTT: failed to parse VerifyOTTResponse JSON from %s: %w. Raw body: %s", endpoint, err, string(body))
 	}
 
 	return &response, nil
 }
 
+func censorEmail(email string) string {
+	atIndex := strings.Index(email, "@")
+	if atIndex <= 0 { // Also handles cases like "@domain.com" or no "@"
+		return "***" // Or return email if it's definitely not an email format? "***" is safer.
+	}
+
+	localPart := email[:atIndex]
+	domainPart := email[atIndex+1:] // Skip the '@'
+
+	prefixLen := 3 // Number of characters to keep at the start
+	if len(localPart) <= prefixLen {
+		// If the local part is short or equal to the prefix length, show it all
+		return localPart + "***@" + domainPart
+	}
+
+	// Otherwise, show the prefix and hide the rest
+	return localPart[:prefixLen] + "***@" + domainPart
+}
+
 // VerifyPasswordAndCompleteLogin verifies password locally and completes the login
 func (c *Client) VerifyPasswordAndCompleteLogin(email, password string, ottResponse *VerifyOTTResponse) (*LoginResponse, error) {
+	// Create a censored version of the email for logging
+	censoredEmail := censorEmail(email)
+
 	// Step 1: Decode the received data
 	salt, err := base64.StdEncoding.DecodeString(ottResponse.Salt)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode salt: %v", err)
+		// Added censored email for privacy and context about the source data (first few chars might be helpful but potentially noisy)
+		return nil, fmt.Errorf("VerifyPasswordAndCompleteLogin: failed to decode base64 salt (len %d) for email %s: %w", len(ottResponse.Salt), censoredEmail, err)
 	}
 
 	encryptedMasterKey, err := base64.StdEncoding.DecodeString(ottResponse.EncryptedMasterKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode encrypted master key: %v", err)
+		return nil, fmt.Errorf("VerifyPasswordAndCompleteLogin: failed to decode base64 encrypted master key (len %d) for email %s: %w", len(ottResponse.EncryptedMasterKey), censoredEmail, err)
 	}
 
 	encryptedPrivateKey, err := base64.StdEncoding.DecodeString(ottResponse.EncryptedPrivateKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode encrypted private key: %v", err)
+		return nil, fmt.Errorf("VerifyPasswordAndCompleteLogin: failed to decode base64 encrypted private key (len %d) for email %s: %w", len(ottResponse.EncryptedPrivateKey), censoredEmail, err)
 	}
 
 	encryptedChallenge, err := base64.StdEncoding.DecodeString(ottResponse.EncryptedChallenge)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode encrypted challenge: %v", err)
+		return nil, fmt.Errorf("VerifyPasswordAndCompleteLogin: failed to decode base64 encrypted challenge (len %d) for email %s: %w", len(ottResponse.EncryptedChallenge), censoredEmail, err)
 	}
 
 	// Step 2: Derive the key encryption key from the password
-	keyEncryptionKey := deriveKeyFromPassword(password, salt)
+	// Be careful about logging anything related to the password itself.
+	keyEncryptionKey, err := deriveKeyFromPassword(password, salt)
+	if err != nil {
+		// Added censored email
+		return nil, fmt.Errorf("VerifyPasswordAndCompleteLogin: failed to derive key encryption key from password (salt len %d) for email %s: %w", len(salt), censoredEmail, err)
+	}
 
 	// Step 3: Attempt to decrypt the master key (this verifies the password)
 	masterKey, err := decryptData(encryptedMasterKey, keyEncryptionKey)
 	if err != nil {
-		return nil, fmt.Errorf("incorrect password: %v", err)
+		// This error specifically indicates a likely password mismatch.
+		// Added censored email and length of key tried to decrypt
+		return nil, fmt.Errorf("VerifyPasswordAndCompleteLogin: failed to decrypt master key (len %d), likely incorrect password for email %s: %w", len(encryptedMasterKey), censoredEmail, err)
 	}
 
 	// Step 4: Decrypt the private key using the master key
 	privateKey, err := decryptData(encryptedPrivateKey, masterKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt private key: %v", err)
+		// Added censored email and length of key tried to decrypt
+		return nil, fmt.Errorf("VerifyPasswordAndCompleteLogin: failed to decrypt private key (len %d) using master key for email %s: %w", len(encryptedPrivateKey), censoredEmail, err)
 	}
 
 	// Step 5: Store the keys for subsequent operations
@@ -212,21 +254,30 @@ func (c *Client) VerifyPasswordAndCompleteLogin(email, password string, ottRespo
 		MasterKey:  masterKey,
 		PrivateKey: privateKey,
 	}
+	// fmt.Printf("VerifyPasswordAndCompleteLogin: Successfully decrypted and stored keys for email %s\n", censoredEmail) // Optional success log with censored email
 
 	// Step 6: Decrypt the challenge using the master key
 	decryptedChallenge, err := decryptData(encryptedChallenge, masterKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt challenge: %v", err)
+		// Added censored email and length of challenge tried to decrypt
+		return nil, fmt.Errorf("VerifyPasswordAndCompleteLogin: failed to decrypt server challenge (len %d, challengeId %s) using master key for email %s: %w", len(encryptedChallenge), ottResponse.ChallengeID, censoredEmail, err)
 	}
 
 	// Step 7: Create the complete login request with the decrypted challenge
 	completeLoginPayload := &CompleteLoginRequest{
-		Email:         email,
+		Email:         email, // Use original email for the request payload
 		ChallengeID:   ottResponse.ChallengeID,
 		DecryptedData: base64.StdEncoding.EncodeToString(decryptedChallenge),
 	}
 
-	return c.completeLogin(completeLoginPayload)
+	// Call completeLogin and wrap potential errors with context
+	loginResponse, err := c.completeLogin(completeLoginPayload)
+	if err != nil {
+		// Added censored email and challenge ID for context
+		return nil, fmt.Errorf("VerifyPasswordAndCompleteLogin: failed during final login completion step (challengeId %s) for email %s: %w", ottResponse.ChallengeID, censoredEmail, err)
+	}
+
+	return loginResponse, nil
 }
 
 // completeLogin sends the decrypted challenge to complete the login process
@@ -247,39 +298,41 @@ func (c *Client) completeLogin(payload *CompleteLoginRequest) (*LoginResponse, e
 	// Convert payload to JSON
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal login completion data: %v", err)
+		return nil, fmt.Errorf("completeLogin: failed to marshal CompleteLoginRequest payload for email %s (challengeId %s): %w", censorEmail(payload.Email), payload.ChallengeID, err)
 	}
 
 	// Create request
 	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %v", err)
+		return nil, fmt.Errorf("completeLogin: failed to create POST request for %s: %w", endpoint, err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	// Send request
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to send login completion request: %v", err)
+		return nil, fmt.Errorf("completeLogin: failed to send request to %s: %w", endpoint, err)
 	}
 	defer resp.Body.Close()
 
 	// Read response
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body) // Changed from ioutil.ReadAll
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %v", err)
+		// Log the status code even if reading the body fails
+		return nil, fmt.Errorf("completeLogin: failed to read response body from %s (status %d): %w", endpoint, resp.StatusCode, err)
 	}
 
 	// Check response status
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("login completion failed with status %d: %s",
-			resp.StatusCode, body)
+		return nil, fmt.Errorf("completeLogin: request to %s failed with status %d: %s",
+			endpoint, resp.StatusCode, string(body))
 	}
 
 	// Parse the response
 	var response LoginResponse
 	if err := json.Unmarshal(body, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse login completion response: %v", err)
+		// Log the raw body for debugging if unmarshalling fails
+		return nil, fmt.Errorf("completeLogin: failed to parse LoginResponse JSON from %s: %w. Raw body: %s", endpoint, err, string(body))
 	}
 
 	// Save tokens to local storage
@@ -289,9 +342,14 @@ func (c *Client) completeLogin(payload *CompleteLoginRequest) (*LoginResponse, e
 		response.RefreshToken,
 		response.AccessTokenExpiryTime,
 	); err != nil {
-		return nil, fmt.Errorf("failed to save tokens: %v", err)
+		// Log the error but potentially return the successful response anyway,
+		// as the login itself succeeded, only saving tokens failed.
+		// Or return the error if saving tokens is critical.
+		// Current implementation returns the error.
+		return nil, fmt.Errorf("completeLogin: login successful for %s, but failed to save tokens: %w", payload.Email, err)
 	}
 
+	// fmt.Printf("completeLogin: Login successful and tokens saved for email %s\n", payload.Email) // Optional success log
 	return &response, nil
 }
 
@@ -299,21 +357,35 @@ func (c *Client) completeLogin(payload *CompleteLoginRequest) (*LoginResponse, e
 func (c *Client) Login(email, password string) (*LoginResponse, error) {
 	// Step 1: Request a one-time token
 	if err := c.RequestLoginOTT(email); err != nil {
-		return nil, fmt.Errorf("failed to request OTT: %v", err)
+		// Wrap error with context of the overall Login operation
+		return nil, fmt.Errorf("Login: step 1 (RequestLoginOTT) failed for email %s: %w", email, err)
 	}
 
 	// In a CLI application, prompt the user for the OTT
 	fmt.Println("Please check your email for a one-time token and enter it when prompted.")
 	var ott string
 	fmt.Print("Enter OTT: ")
-	fmt.Scanln(&ott)
+	_, err := fmt.Scanln(&ott) // Check Scanln error
+	if err != nil {
+		return nil, fmt.Errorf("Login: failed to read OTT input: %w", err)
+	}
+	if ott == "" {
+		return nil, fmt.Errorf("Login: OTT input cannot be empty")
+	}
 
 	// Step 2: Verify the OTT and get the encrypted keys and challenge
 	ottResponse, err := c.VerifyLoginOTT(email, ott)
 	if err != nil {
-		return nil, fmt.Errorf("failed to verify OTT: %v", err)
+		// Wrap error with context of the overall Login operation
+		return nil, fmt.Errorf("Login: step 2 (VerifyLoginOTT) failed for email %s: %w", email, err)
 	}
 
 	// Step 3: Verify password locally and complete the login
-	return c.VerifyPasswordAndCompleteLogin(email, password, ottResponse)
+	loginResponse, err := c.VerifyPasswordAndCompleteLogin(email, password, ottResponse)
+	if err != nil {
+		// Wrap error with context of the overall Login operation
+		return nil, fmt.Errorf("Login: step 3 (VerifyPasswordAndCompleteLogin) failed for email %s: %w", censorEmail(email), err)
+	}
+
+	return loginResponse, nil
 }

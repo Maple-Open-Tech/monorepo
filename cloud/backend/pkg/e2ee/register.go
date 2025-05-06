@@ -43,7 +43,10 @@ func (c *Client) PrepareRegistration(
 	}
 
 	// Derive the key encryption key from the password
-	keyEncryptionKey := deriveKeyFromPassword(password, salt)
+	keyEncryptionKey, err := deriveKeyFromPassword(password, salt)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to derive key encryption key: %v", err)
+	}
 
 	// Encrypt the master key with the key encryption key
 	encryptedMasterKey, err := encryptData(masterKey, keyEncryptionKey)

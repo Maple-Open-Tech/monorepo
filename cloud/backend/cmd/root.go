@@ -7,7 +7,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/cmd/client"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/cmd/daemon"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/cmd/version"
 )
@@ -30,7 +29,6 @@ func Execute() {
 	// Attach sub-commands to our main root.
 	rootCmd.AddCommand(daemon.DaemonCmd())
 	rootCmd.AddCommand(version.VersionCmd())
-	rootCmd.AddCommand(client.ClientCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

@@ -34,7 +34,7 @@ func Execute() {
 	// Attach sub-commands to our main root.
 	rootCmd.AddCommand(version.VersionCmd())
 	rootCmd.AddCommand(initialize.InitializeCmd())
-	rootCmd.AddCommand(remote.RemoteVersionCmd())
+	rootCmd.AddCommand(remote.RemoteCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

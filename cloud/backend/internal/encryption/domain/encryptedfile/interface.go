@@ -4,7 +4,6 @@ package encryptedfile
 import (
 	"context"
 	"io"
-	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -20,10 +19,4 @@ type Repository interface {
 
 	// List files for a user
 	ListByUserID(ctx context.Context, userID primitive.ObjectID) ([]*EncryptedFile, error)
-
-	// Download content for a file
-	DownloadContent(ctx context.Context, file *EncryptedFile) (io.ReadCloser, error)
-
-	// Get a presigned URL for direct download
-	GetDownloadURL(ctx context.Context, file *EncryptedFile, expiryDuration time.Duration) (string, error)
 }

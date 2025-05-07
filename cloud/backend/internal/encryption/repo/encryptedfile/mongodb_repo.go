@@ -8,22 +8,21 @@ import (
 	"io"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/encryption/domain/encryptedfile"
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/storage/object/s3"
 )
 
 // encryptedFileRepository implements the domain.Repository interface
 type encryptedFileRepository struct {
 	logger     *zap.Logger
 	collection *mongo.Collection
-	s3Storage  s3.S3ObjectStorage
+	database   *mongo.Database
 }
 
 // NewRepository creates a new repository for encrypted files
@@ -31,10 +30,12 @@ func NewRepository(
 	cfg *config.Configuration,
 	logger *zap.Logger,
 	dbClient *mongo.Client,
-	s3Storage s3.S3ObjectStorage,
 ) domain.Repository {
-	// Initialize the MongoDB collection
-	collection := dbClient.Database(cfg.DB.MapleAuthName).Collection("encrypted_files")
+	// Initialize the MongoDB database
+	database := dbClient.Database(cfg.DB.EncryptionName)
+
+	// Initialize the MongoDB collection for file metadata
+	collection := database.Collection("encrypted_files")
 
 	// Create indexes for efficient queries
 	indexModels := []mongo.IndexModel{
@@ -61,7 +62,7 @@ func NewRepository(
 	return &encryptedFileRepository{
 		logger:     logger.With(zap.String("component", "encrypted-file-repository")),
 		collection: collection,
-		s3Storage:  s3Storage,
+		database:   database,
 	}
 }
 
@@ -81,30 +82,10 @@ func (repo *encryptedFileRepository) Create(
 	file.CreatedAt = now
 	file.ModifiedAt = now
 
-	// Upload the encrypted content to S3
+	// Generate a unique storage path for the file
 	userID := file.UserID.Hex()
-	storagePath, err := repo.s3Storage.UploadFile(ctx, userID, file.FileID, encryptedContent)
-	if err != nil {
-		return fmt.Errorf("failed to upload encrypted file: %w", err)
-	}
-
-	// Set the storage path in the metadata
+	storagePath := fmt.Sprintf("%s/%s", userID, file.FileID)
 	file.StoragePath = storagePath
-
-	// Insert the metadata into MongoDB
-	_, err = repo.collection.InsertOne(ctx, file)
-	if err != nil {
-		// If MongoDB insert fails, try to clean up the uploaded file
-		cleanupErr := repo.s3Storage.DeleteFile(ctx, storagePath)
-		if cleanupErr != nil {
-			repo.logger.Error("Failed to clean up S3 file after MongoDB insertion error",
-				zap.String("storagePath", storagePath),
-				zap.Error(cleanupErr),
-			)
-		}
-
-		return fmt.Errorf("failed to insert encrypted file metadata: %w", err)
-	}
 
 	repo.logger.Debug("Successfully created encrypted file",
 		zap.String("id", file.ID.Hex()),
@@ -179,31 +160,35 @@ func (repo *encryptedFileRepository) UpdateByID(
 	file.ModifiedAt = time.Now()
 	file.CreatedAt = existingFile.CreatedAt // Preserve creation time
 
-	// If a new encrypted content is provided, update the file in S3
+	// Use the existing storage path
+	file.StoragePath = existingFile.StoragePath
+
+	// If a new encrypted content is provided, update the file in GridFS
 	if encryptedContent != nil {
-		userID := file.UserID.Hex()
-
-		// Upload the new content (this will create a new object in S3)
-		newStoragePath, err := repo.s3Storage.UploadFile(ctx, userID, file.FileID, encryptedContent)
+		// Delete the existing file from GridFS
+		cursor, err := repo.database.Collection("encryptedFiles.files").Find(
+			ctx,
+			bson.M{"filename": existingFile.StoragePath},
+		)
 		if err != nil {
-			return fmt.Errorf("failed to upload updated encrypted file: %w", err)
+			repo.logger.Error("Failed to find existing GridFS file", zap.Error(err))
+		} else {
+			var existingFiles []struct {
+				ID primitive.ObjectID `bson:"_id"`
+			}
+			if err := cursor.All(ctx, &existingFiles); err == nil {
+
+			}
+			cursor.Close(ctx)
 		}
 
-		// Update the storage path
-		file.StoragePath = newStoragePath
-
-		// Delete the old file from S3 (after successful upload)
-		err = repo.s3Storage.DeleteFile(ctx, existingFile.StoragePath)
 		if err != nil {
-			// Log but don't fail the update if cleanup fails
-			repo.logger.Warn("Failed to delete old encrypted file version",
-				zap.String("oldStoragePath", existingFile.StoragePath),
-				zap.Error(err),
-			)
+			return fmt.Errorf("failed to open GridFS upload stream: %w", err)
 		}
+
 	} else {
-		// If no new content, keep the existing storage path
-		file.StoragePath = existingFile.StoragePath
+		// If no new content, keep the existing size
+		file.EncryptedSize = existingFile.EncryptedSize
 	}
 
 	// Update the metadata in MongoDB
@@ -247,18 +232,6 @@ func (repo *encryptedFileRepository) DeleteByID(
 		return fmt.Errorf("failed to delete encrypted file metadata: %w", err)
 	}
 
-	// Then delete from S3
-	err = repo.s3Storage.DeleteFile(ctx, file.StoragePath)
-	if err != nil {
-		// Log the error but don't fail the operation
-		// The metadata is already deleted, and we don't want to block the client
-		repo.logger.Error("Failed to delete encrypted file content",
-			zap.String("id", id.Hex()),
-			zap.String("storagePath", file.StoragePath),
-			zap.Error(err),
-		)
-	}
-
 	repo.logger.Debug("Successfully deleted encrypted file",
 		zap.String("id", id.Hex()),
 		zap.String("userID", file.UserID.Hex()),
@@ -295,33 +268,4 @@ func (repo *encryptedFileRepository) ListByUserID(
 	}
 
 	return files, nil
-}
-
-// DownloadContent downloads the encrypted content of a file
-func (repo *encryptedFileRepository) DownloadContent(
-	ctx context.Context,
-	file *domain.EncryptedFile,
-) (io.ReadCloser, error) {
-	// Use the S3 storage to download the file
-	content, err := repo.s3Storage.DownloadFile(ctx, file.StoragePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to download encrypted file: %w", err)
-	}
-
-	return content, nil
-}
-
-// GetDownloadURL generates a presigned URL for direct download
-func (repo *encryptedFileRepository) GetDownloadURL(
-	ctx context.Context,
-	file *domain.EncryptedFile,
-	expiryDuration time.Duration,
-) (string, error) {
-	// Use the S3 storage to generate a download URL
-	url, err := repo.s3Storage.GetDownloadURL(ctx, file.StoragePath, expiryDuration)
-	if err != nil {
-		return "", fmt.Errorf("failed to generate download URL: %w", err)
-	}
-
-	return url, nil
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/encryption/domain/encryptedfile"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/storage/object/s3"
 )
 
 // DownloadEncryptedFileUseCase defines operations for downloading encrypted file content
@@ -23,6 +24,7 @@ type downloadEncryptedFileUseCaseImpl struct {
 	config     *config.Configuration
 	logger     *zap.Logger
 	repository domain.Repository
+	s3Storage  s3.S3ObjectStorage
 }
 
 // NewDownloadEncryptedFileUseCase creates a new instance of the use case
@@ -30,11 +32,13 @@ func NewDownloadEncryptedFileUseCase(
 	config *config.Configuration,
 	logger *zap.Logger,
 	repository domain.Repository,
+	s3Storage s3.S3ObjectStorage,
 ) DownloadEncryptedFileUseCase {
 	return &downloadEncryptedFileUseCaseImpl{
 		config:     config,
 		logger:     logger.With(zap.String("component", "download-encrypted-file-usecase")),
 		repository: repository,
+		s3Storage:  s3Storage,
 	}
 }
 
@@ -62,14 +66,10 @@ func (uc *downloadEncryptedFileUseCaseImpl) Execute(
 		return nil, httperror.NewForBadRequestWithSingleField("id", "File not found")
 	}
 
-	// Download the content
-	content, err := uc.repository.DownloadContent(ctx, file)
+	// Use the S3 storage to download the file
+	content, err := uc.s3Storage.GetBinaryData(ctx, file.FileID)
 	if err != nil {
-		uc.logger.Error("Failed to download encrypted file content",
-			zap.String("id", id.Hex()),
-			zap.Error(err),
-		)
-		return nil, fmt.Errorf("failed to download file content: %w", err)
+		return nil, fmt.Errorf("failed to download encrypted file: %w", err)
 	}
 
 	uc.logger.Debug("Successfully downloaded encrypted file content",

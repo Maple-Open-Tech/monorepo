@@ -12,6 +12,7 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/encryption/domain/encryptedfile"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/storage/object/s3"
 )
 
 // GetEncryptedFileDownloadURLUseCase defines operations for generating a download URL
@@ -23,6 +24,7 @@ type getEncryptedFileDownloadURLUseCaseImpl struct {
 	config     *config.Configuration
 	logger     *zap.Logger
 	repository domain.Repository
+	s3Storage  s3.S3ObjectStorage
 }
 
 // NewGetEncryptedFileDownloadURLUseCase creates a new instance of the use case
@@ -30,11 +32,13 @@ func NewGetEncryptedFileDownloadURLUseCase(
 	config *config.Configuration,
 	logger *zap.Logger,
 	repository domain.Repository,
+	s3Storage s3.S3ObjectStorage,
 ) GetEncryptedFileDownloadURLUseCase {
 	return &getEncryptedFileDownloadURLUseCaseImpl{
 		config:     config,
 		logger:     logger.With(zap.String("component", "get-encrypted-file-download-url-usecase")),
 		repository: repository,
+		s3Storage:  s3Storage,
 	}
 }
 
@@ -75,7 +79,7 @@ func (uc *getEncryptedFileDownloadURLUseCaseImpl) Execute(
 	}
 
 	// Generate the download URL
-	url, err := uc.repository.GetDownloadURL(ctx, file, expiryDuration)
+	url, err := uc.s3Storage.GetDownloadablePresignedURL(ctx, file.FileID, expiryDuration)
 	if err != nil {
 		uc.logger.Error("Failed to generate download URL",
 			zap.String("id", id.Hex()),

@@ -17,11 +17,11 @@ func Module() fx.Option {
 	return fx.Options(
 		fx.Provide(
 			fx.Annotate(
-				mailgun.NewIncomePropertyEvaluatorModuleEmailer,
-				fx.ResultTags(`name:"income-property-evaluator-module-emailer"`), // Create name for better dependency management handling.
+				mailgun.NewPaperCloudPropertyEvaluatorModuleEmailer,
+				fx.ResultTags(`name:"papercloud-module-emailer"`), // Create name for better dependency management handling.
 			),
 			fx.Annotate(
-				mailgun.NewIncomePropertyEvaluatorModuleEmailer, //TODO: TEMPORARILY USED AS AN EXAMPLE.
+				mailgun.NewPaperCloudPropertyEvaluatorModuleEmailer, //TODO: TEMPORARILY USED AS AN EXAMPLE.
 				fx.ResultTags(`name:"maplesend-module-emailer"`),
 			),
 		),

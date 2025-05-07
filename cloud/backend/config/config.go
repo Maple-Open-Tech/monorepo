@@ -11,10 +11,10 @@ import (
 )
 
 type Configuration struct {
-	App        AppConfig
-	Cache      CacheConf
-	DB         DBConfig
-	IPEMailgun MailgunConfig
+	App               AppConfig
+	Cache             CacheConf
+	DB                DBConfig
+	PAPERCLOUDMailgun MailgunConfig
 }
 
 type CacheConf struct {
@@ -33,10 +33,10 @@ type AppConfig struct {
 }
 
 type DBConfig struct {
-	URI                         string
-	MapleAuthName               string
-	IncomePropertyEvaluatorName string
-	MapleSendName               string
+	URI                             string
+	MapleAuthName                   string
+	PaperCloudPropertyEvaluatorName string
+	MapleSendName                   string
 }
 
 type MailgunConfig struct {
@@ -66,7 +66,7 @@ func NewProvider() *Configuration {
 	// --- Database section ---
 	c.DB.URI = getEnv("BACKEND_DB_URI", true)
 	c.DB.MapleAuthName = getEnv("BACKEND_DB_MAPLEAUTH_NAME", true)
-	c.DB.IncomePropertyEvaluatorName = getEnv("BACKEND_DB_INCOME_PROPERTY_EVALUATOR_NAME", true)
+	c.DB.PaperCloudPropertyEvaluatorName = getEnv("BACKEND_DB_PAPER_CLOUD_NAME", true)
 	c.DB.MapleSendName = getEnv("BACKEND_DB_MAPLESEND_NAME", true)
 
 	// --- Cache ---
@@ -74,13 +74,13 @@ func NewProvider() *Configuration {
 
 	// --------- INCOME PROPERTY EVALUATOR ------------
 	// --- Mailgun ---
-	c.IPEMailgun.APIKey = getEnv("BACKEND_IPE_MAILGUN_API_KEY", true)
-	c.IPEMailgun.Domain = getEnv("BACKEND_IPE_MAILGUN_DOMAIN", true)
-	c.IPEMailgun.APIBase = getEnv("BACKEND_IPE_MAILGUN_API_BASE", true)
-	c.IPEMailgun.SenderEmail = getEnv("BACKEND_IPE_MAILGUN_SENDER_EMAIL", true)
-	c.IPEMailgun.MaintenanceEmail = getEnv("BACKEND_IPE_MAILGUN_MAINTENANCE_EMAIL", true)
-	c.IPEMailgun.FrontendDomain = getEnv("BACKEND_IPE_MAILGUN_FRONTEND_DOMAIN", true)
-	c.IPEMailgun.BackendDomain = getEnv("BACKEND_IPE_MAILGUN_BACKEND_DOMAIN", true)
+	c.PAPERCLOUDMailgun.APIKey = getEnv("BACKEND_PAPERCLOUD_MAILGUN_API_KEY", true)
+	c.PAPERCLOUDMailgun.Domain = getEnv("BACKEND_PAPERCLOUD_MAILGUN_DOMAIN", true)
+	c.PAPERCLOUDMailgun.APIBase = getEnv("BACKEND_PAPERCLOUD_MAILGUN_API_BASE", true)
+	c.PAPERCLOUDMailgun.SenderEmail = getEnv("BACKEND_PAPERCLOUD_MAILGUN_SENDER_EMAIL", true)
+	c.PAPERCLOUDMailgun.MaintenanceEmail = getEnv("BACKEND_PAPERCLOUD_MAILGUN_MAINTENANCE_EMAIL", true)
+	c.PAPERCLOUDMailgun.FrontendDomain = getEnv("BACKEND_PAPERCLOUD_MAILGUN_FRONTEND_DOMAIN", true)
+	c.PAPERCLOUDMailgun.BackendDomain = getEnv("BACKEND_PAPERCLOUD_MAILGUN_BACKEND_DOMAIN", true)
 
 	return &c
 }

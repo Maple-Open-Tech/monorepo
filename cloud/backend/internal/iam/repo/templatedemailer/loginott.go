@@ -12,13 +12,13 @@ import (
 func (impl *templatedEmailer) SendUserLoginOneTimeTokenEmail(ctx context.Context, monolithModule int, email, oneTimeToken, firstName string) error {
 	switch monolithModule {
 	case 1:
-		return impl.SendIncomePropertyEvaluatorModuleUserLoginOneTimeTokenEmail(ctx, email, oneTimeToken, firstName)
+		return impl.SendPaperCloudPropertyEvaluatorModuleUserLoginOneTimeTokenEmail(ctx, email, oneTimeToken, firstName)
 	default:
 		return fmt.Errorf("unsupported monolith module: %d", monolithModule)
 	}
 }
 
-func (impl *templatedEmailer) SendIncomePropertyEvaluatorModuleUserLoginOneTimeTokenEmail(ctx context.Context, email, oneTimeToken, firstName string) error {
+func (impl *templatedEmailer) SendPaperCloudPropertyEvaluatorModuleUserLoginOneTimeTokenEmail(ctx context.Context, email, oneTimeToken, firstName string) error {
 	fp := path.Join("templates", "ipe/login_ott.html")
 	tmpl, err := template.ParseFiles(fp)
 	if err != nil {

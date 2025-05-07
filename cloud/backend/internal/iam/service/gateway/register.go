@@ -134,8 +134,8 @@ func (svc *gatewayFederatedUserRegisterServiceImpl) Execute(
 	if req.Module == 0 {
 		e["module"] = "Module is required"
 	} else {
-		// Assuming MonolithModuleIncomePropertyEvaluator is the only valid module for now
-		if req.Module != int(constants.MonolithModuleIncomePropertyEvaluator) {
+		// Assuming MonolithModulePaperCloudPropertyEvaluator is the only valid module for now
+		if req.Module != int(constants.MonolithModulePaperCloudPropertyEvaluator) {
 			e["module"] = "Module is invalid"
 		}
 	}

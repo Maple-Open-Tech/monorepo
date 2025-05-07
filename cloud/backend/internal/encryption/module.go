@@ -4,6 +4,7 @@ package encryption
 import (
 	"go.uber.org/fx"
 
+	iface "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/encryption/interface/http"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/encryption/repo"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/encryption/service"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/encryption/usecase"
@@ -14,7 +15,6 @@ func Module() fx.Option {
 		repo.Module(),
 		usecase.Module(),
 		service.Module(),
-		// Will add this in the future:
-		// http.Module(),
+		iface.Module(),
 	)
 }

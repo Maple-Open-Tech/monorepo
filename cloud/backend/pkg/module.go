@@ -11,6 +11,7 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/password"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/storage/database/mongodb"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/storage/database/mongodbcache"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/storage/object/s3"
 )
 
 func Module() fx.Option {
@@ -33,6 +34,7 @@ func Module() fx.Option {
 			password.NewProvider,
 			mongodb.NewProvider,
 			mongodbcache.NewProvider,
+			s3.NewProvider,
 		),
 	)
 }

@@ -14,6 +14,7 @@ type Configuration struct {
 	App               AppConfig
 	Cache             CacheConf
 	DB                DBConfig
+	AWS               AWSConfig
 	PAPERCLOUDMailgun MailgunConfig
 }
 
@@ -49,6 +50,14 @@ type MailgunConfig struct {
 	BackendDomain    string
 }
 
+type AWSConfig struct {
+	AccessKey  string
+	SecretKey  string
+	Endpoint   string
+	Region     string
+	BucketName string
+}
+
 func NewProvider() *Configuration {
 	var c Configuration
 
@@ -72,7 +81,14 @@ func NewProvider() *Configuration {
 	// --- Cache ---
 	c.Cache.URI = getEnv("BACKEND_CACHE_URI", true)
 
-	// --------- INCOME PROPERTY EVALUATOR ------------
+	// --- AWS ---
+	c.AWS.AccessKey = getEnv("BACKEND_AWS_ACCESS_KEY", true)
+	c.AWS.SecretKey = getEnv("BACKEND_AWS_SECRET_KEY", true)
+	c.AWS.Endpoint = getEnv("BACKEND_AWS_ENDPOINT", true)
+	c.AWS.Region = getEnv("BACKEND_AWS_REGION", true)
+	c.AWS.BucketName = getEnv("BACKEND_AWS_BUCKET_NAME", true)
+
+	// --------- PaperCloud ------------
 	// --- Mailgun ---
 	c.PAPERCLOUDMailgun.APIKey = getEnv("BACKEND_PAPERCLOUD_MAILGUN_API_KEY", true)
 	c.PAPERCLOUDMailgun.Domain = getEnv("BACKEND_PAPERCLOUD_MAILGUN_DOMAIN", true)

@@ -16,11 +16,11 @@ func RemoteCmd() *cobra.Command {
 
 	// Add Remote-related commands
 	cmd.AddCommand(HealthCheckCmd())
-	// cmd.AddCommand(EchoCmd())
-	// cmd.AddCommand(RegisterUserCmd())
-	// cmd.AddCommand(VerifyEmailCmd())
-	// cmd.AddCommand(LoginUserCmd())
-	// cmd.AddCommand(LogoutUserCmd())
+	cmd.AddCommand(EchoCmd())
+	cmd.AddCommand(RegisterUserCmd())
+	cmd.AddCommand(VerifyEmailCmd())
+	cmd.AddCommand(LoginUserCmd())
+	cmd.AddCommand(LogoutUserCmd())
 
 	return cmd
 }

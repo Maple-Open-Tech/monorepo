@@ -23,7 +23,7 @@ import (
 type encryptedFileRepository struct {
 	logger     *zap.Logger
 	collection *mongo.Collection
-	s3Storage  *s3ObjectStorage
+	s3Storage  s3.S3ObjectStorage
 }
 
 // NewRepository creates a new repository for encrypted files
@@ -31,7 +31,7 @@ func NewRepository(
 	cfg *config.Configuration,
 	logger *zap.Logger,
 	dbClient *mongo.Client,
-	s3Provider s3.S3ObjectStorage,
+	s3Storage s3.S3ObjectStorage,
 ) domain.Repository {
 	// Initialize the MongoDB collection
 	collection := dbClient.Database(cfg.DB.MapleAuthName).Collection("encrypted_files")
@@ -57,9 +57,6 @@ func NewRepository(
 	if err != nil {
 		logger.Error("Failed to create indexes for encrypted files collection", zap.Error(err))
 	}
-
-	// Initialize the S3 storage
-	s3Storage := NewS3ObjectStorage(cfg, logger, s3Provider)
 
 	return &encryptedFileRepository{
 		logger:     logger.With(zap.String("component", "encrypted-file-repository")),

@@ -10,7 +10,6 @@ import (
 func Module() fx.Option {
 	return fx.Options(
 		fx.Provide(
-			encryptedfile.NewS3ObjectStorage,
 			encryptedfile.NewRepository,
 		),
 	)

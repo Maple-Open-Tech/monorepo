@@ -29,16 +29,26 @@ type Preferences struct {
 	// that our client will communicate with.
 	CloudProviderAddress string `json:"cloud_provider_address"`
 
+	VerifyOTTResponse *VerifyOTTResponse `json:"verify_ott_response"`
+	LoginResponse     *LoginResponse     `json:"login_response"`
+}
+
+// VerifyOTTResponse contains encrypted keys and challenge
+type VerifyOTTResponse struct {
+	Salt                string `json:"salt"`
+	PublicKey           string `json:"publicKey"`
+	EncryptedMasterKey  string `json:"encryptedMasterKey"`
+	EncryptedPrivateKey string `json:"encryptedPrivateKey"`
+	EncryptedChallenge  string `json:"encryptedChallenge"`
+	ChallengeID         string `json:"challengeId"`
+}
+
+// LoginResponse contains the server's response after a successful login
+type LoginResponse struct {
 	AccessToken            string    `json:"access_token"`
 	AccessTokenExpiryTime  time.Time `json:"access_token_expiry_time"`
 	RefreshToken           string    `json:"refresh_token"`
 	RefreshTokenExpiryTime time.Time `json:"refresh_token_expiry_time"`
-
-	MasterKeyEncrypted   string // e.g., the encrypted master key
-	MasterKeySalt        string // salt used for key derivation
-	RecoveryKeyEncrypted string // encrypted recovery key
-	PublicKey            string // user's public key
-	PrivateKeyEncrypted  string // encrypted private key
 }
 
 var (
@@ -108,8 +118,15 @@ func (pref *Preferences) SetCloudProviderAddress(cloudProviderAddress string) er
 	return os.WriteFile(FilePathPreferences, data, 0666)
 }
 
-func (pref *Preferences) SetAccessToken(accessToken string) error {
-	pref.AccessToken = accessToken
+func (pref *Preferences) SetVerifyOTTResponse(masterKeyEncrypted, masterKeySalt, encryptedChallenge, publicKey, privateKeyEncrypted, challengeID string) error {
+	pref.VerifyOTTResponse = &VerifyOTTResponse{
+		Salt:                masterKeySalt,
+		PublicKey:           publicKey,
+		EncryptedMasterKey:  masterKeyEncrypted,
+		EncryptedPrivateKey: privateKeyEncrypted,
+		EncryptedChallenge:  encryptedChallenge,
+		ChallengeID:         challengeID,
+	}
 	data, err := json.MarshalIndent(pref, "", "\t")
 	if err != nil {
 		return err
@@ -117,71 +134,18 @@ func (pref *Preferences) SetAccessToken(accessToken string) error {
 	return os.WriteFile(FilePathPreferences, data, 0666)
 }
 
-func (pref *Preferences) SetAccessTokenExpiryTime(accessTokenExpiryTime time.Time) error {
-	pref.AccessTokenExpiryTime = accessTokenExpiryTime
-	data, err := json.MarshalIndent(pref, "", "\t")
-	if err != nil {
-		return err
+func (pref *Preferences) SetLoginResponse(
+	accessToken string,
+	accessTokenExpiryTime time.Time,
+	refreshToken string,
+	refreshTokenExpiryTime time.Time,
+) error {
+	pref.LoginResponse = &LoginResponse{
+		AccessToken:            accessToken,
+		AccessTokenExpiryTime:  accessTokenExpiryTime,
+		RefreshToken:           refreshToken,
+		RefreshTokenExpiryTime: refreshTokenExpiryTime,
 	}
-	return os.WriteFile(FilePathPreferences, data, 0666)
-}
-
-func (pref *Preferences) SetRefreshToken(refreshToken string) error {
-	pref.RefreshToken = refreshToken
-	data, err := json.MarshalIndent(pref, "", "\t")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(FilePathPreferences, data, 0666)
-}
-
-func (pref *Preferences) SetRefreshTokenExpiryTime(refreshTokenExpiryTime time.Time) error {
-	pref.RefreshTokenExpiryTime = refreshTokenExpiryTime
-	data, err := json.MarshalIndent(pref, "", "\t")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(FilePathPreferences, data, 0666)
-}
-
-func (pref *Preferences) SetMasterKeyEncrypted(masterKeyEncrypted string) error {
-	pref.MasterKeyEncrypted = masterKeyEncrypted
-	data, err := json.MarshalIndent(pref, "", "\t")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(FilePathPreferences, data, 0666)
-}
-
-func (pref *Preferences) SetMasterKeySalt(masterKeySalt string) error {
-	pref.MasterKeySalt = masterKeySalt
-	data, err := json.MarshalIndent(pref, "", "\t")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(FilePathPreferences, data, 0666)
-}
-
-func (pref *Preferences) SetRecoveryKeyEncrypted(recoveryKeyEncrypted string) error {
-	pref.RecoveryKeyEncrypted = recoveryKeyEncrypted
-	data, err := json.MarshalIndent(pref, "", "\t")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(FilePathPreferences, data, 0666)
-}
-
-func (pref *Preferences) SetPublicKey(publicKey string) error {
-	pref.PublicKey = publicKey
-	data, err := json.MarshalIndent(pref, "", "\t")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(FilePathPreferences, data, 0666)
-}
-
-func (pref *Preferences) SetPrivateKeyEncrypted(privateKeyEncrypted string) error {
-	pref.PrivateKeyEncrypted = privateKeyEncrypted
 	data, err := json.MarshalIndent(pref, "", "\t")
 	if err != nil {
 		return err

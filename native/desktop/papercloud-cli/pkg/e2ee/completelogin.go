@@ -178,57 +178,6 @@ func (c *Client) completeLogin(payload *CompleteLoginRequest) (*LoginResponse, e
 		return nil, fmt.Errorf("completeLogin: failed to parse LoginResponse JSON from %s: %w. Raw body: %s", endpoint, err, string(body))
 	}
 
-	// Save tokens to local storage
-	if err := SaveTokens(
-		payload.Email,
-		response.AccessToken,
-		response.RefreshToken,
-		response.AccessTokenExpiryTime,
-	); err != nil {
-		// Log the error but potentially return the successful response anyway,
-		// as the login itself succeeded, only saving tokens failed.
-		// Or return the error if saving tokens is critical.
-		// Current implementation returns the error.
-		return nil, fmt.Errorf("completeLogin: login successful for %s, but failed to save tokens: %w", payload.Email, err)
-	}
-
 	// fmt.Printf("completeLogin: Login successful and tokens saved for email %s\n", payload.Email) // Optional success log
 	return &response, nil
-}
-
-// Login provides a simplified interface for the multi-step login process
-func (c *Client) Login(email, password string) (*LoginResponse, error) {
-	// Step 1: Request a one-time token
-	if err := c.RequestLoginOTT(email); err != nil {
-		// Wrap error with context of the overall Login operation
-		return nil, fmt.Errorf("Login: step 1 (RequestLoginOTT) failed for email %s: %w", email, err)
-	}
-
-	// In a CLI application, prompt the user for the OTT
-	fmt.Println("Please check your email for a one-time token and enter it when prompted.")
-	var ott string
-	fmt.Print("Enter OTT: ")
-	_, err := fmt.Scanln(&ott) // Check Scanln error
-	if err != nil {
-		return nil, fmt.Errorf("Login: failed to read OTT input: %w", err)
-	}
-	if ott == "" {
-		return nil, fmt.Errorf("Login: OTT input cannot be empty")
-	}
-
-	// Step 2: Verify the OTT and get the encrypted keys and challenge
-	ottResponse, err := c.VerifyLoginOTT(email, ott)
-	if err != nil {
-		// Wrap error with context of the overall Login operation
-		return nil, fmt.Errorf("Login: step 2 (VerifyLoginOTT) failed for email %s: %w", email, err)
-	}
-
-	// Step 3: Verify password locally and complete the login
-	loginResponse, err := c.VerifyPasswordAndCompleteLogin(email, password, ottResponse)
-	if err != nil {
-		// Wrap error with context of the overall Login operation
-		return nil, fmt.Errorf("Login: step 3 (VerifyPasswordAndCompleteLogin) failed for email %s: %w", censorEmail(email), err)
-	}
-
-	return loginResponse, nil
 }

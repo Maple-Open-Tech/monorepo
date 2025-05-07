@@ -11,6 +11,11 @@ var (
 	preferences *pref.Preferences
 )
 
+// Initialize function will be called when every command gets called.
+func init() {
+	preferences = pref.PreferencesInstance()
+}
+
 func RemoteCmd() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "remote",
@@ -25,8 +30,10 @@ func RemoteCmd() *cobra.Command {
 	cmd.AddCommand(EchoCmd())
 	cmd.AddCommand(RegisterUserCmd())
 	cmd.AddCommand(VerifyEmailCmd())
-	cmd.AddCommand(LoginUserCmd())
-	cmd.AddCommand(LogoutUserCmd())
+	cmd.AddCommand(RequestLoginOneTimeTokenUserCmd())
+	cmd.AddCommand(VerifyLoginOneTimeTokenUserCmd())
+	cmd.AddCommand(CompleteLoginCmd())
+	// cmd.AddCommand(LogoutUserCmd())
 
 	return cmd
 }

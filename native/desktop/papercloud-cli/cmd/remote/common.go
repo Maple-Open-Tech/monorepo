@@ -4,8 +4,8 @@ package remote
 import (
 	"fmt"
 
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/e2ee"
 	pref "github.com/Maple-Open-Tech/monorepo/native/desktop/papercloud-cli/internal/common/preferences"
+	"github.com/Maple-Open-Tech/monorepo/native/desktop/papercloud-cli/pkg/e2ee"
 )
 
 // createE2EEClient creates a new e2ee client with server URL from preferences

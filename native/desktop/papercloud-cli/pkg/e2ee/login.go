@@ -1,4 +1,3 @@
-// cloud/backend/pkg/e2ee/login.go
 package e2ee
 
 import (

@@ -1,4 +1,4 @@
-// cloud/backend/internal/encryption/service.go
+// cloud/backend/internal/encryption/service/module.go
 package service
 
 import (
@@ -7,10 +7,18 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/encryption/service/encryptedfile"
 )
 
+// Module registers all services for encrypted files
 func Module() fx.Option {
 	return fx.Options(
 		fx.Provide(
-			encryptedfile.NewEncryptedFileService,
+			encryptedfile.NewCreateEncryptedFileService,
+			encryptedfile.NewGetEncryptedFileByIDService,
+			encryptedfile.NewGetEncryptedFileByFileIDService,
+			encryptedfile.NewUpdateEncryptedFileService,
+			encryptedfile.NewDeleteEncryptedFileService,
+			encryptedfile.NewListEncryptedFilesService,
+			encryptedfile.NewDownloadEncryptedFileService,
+			encryptedfile.NewGetEncryptedFileDownloadURLService,
 		),
 	)
 }

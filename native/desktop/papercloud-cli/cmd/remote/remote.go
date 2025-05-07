@@ -3,6 +3,12 @@ package remote
 
 import (
 	"github.com/spf13/cobra"
+
+	pref "github.com/Maple-Open-Tech/monorepo/native/desktop/papercloud-cli/internal/common/preferences"
+)
+
+var (
+	preferences *pref.Preferences
 )
 
 func RemoteCmd() *cobra.Command {

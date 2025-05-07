@@ -4,7 +4,6 @@ package remote
 import (
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"time"
 
@@ -64,10 +63,17 @@ Examples:
 			fmt.Printf("✓ Successfully logged in as %s\n", email)
 			fmt.Printf("- Access token expires in: %s\n", duration)
 
-			// Add the home directory information
-			homeDir, err := os.UserHomeDir()
-			if err == nil {
-				fmt.Printf("- Tokens saved to: %s/.maple/auth.json\n", homeDir)
+			if err := preferences.SetAccessToken(response.AccessToken); err != nil {
+				log.Fatalf("Failed to set access token: %v", err)
+			}
+			if err := preferences.SetAccessTokenExpiryTime(response.AccessTokenExpiryTime); err != nil {
+				log.Fatalf("Failed to set access token expiry time: %v", err)
+			}
+			if err := preferences.SetRefreshToken(response.RefreshToken); err != nil {
+				log.Fatalf("Failed to set refresh token: %v", err)
+			}
+			if err := preferences.SetRefreshTokenExpiryTime(response.RefreshTokenExpiryTime); err != nil {
+				log.Fatalf("Failed to set refresh token expiry time: %v", err)
 			}
 		},
 	}

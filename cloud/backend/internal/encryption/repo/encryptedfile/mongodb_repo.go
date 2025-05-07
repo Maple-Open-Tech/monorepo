@@ -26,8 +26,8 @@ type encryptedFileRepository struct {
 	s3Storage  *s3ObjectStorage
 }
 
-// NewEncryptedFileRepository creates a new repository for encrypted files
-func NewEncryptedFileRepository(
+// NewRepository creates a new repository for encrypted files
+func NewRepository(
 	cfg *config.Configuration,
 	logger *zap.Logger,
 	dbClient *mongo.Client,

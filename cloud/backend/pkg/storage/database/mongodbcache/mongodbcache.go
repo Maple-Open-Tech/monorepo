@@ -52,7 +52,7 @@ func NewProvider(
 ) Cacher {
 	logger.Debug("cache initializing...")
 
-	cc := dbClient.Database(appCfg.DB.MapleSendName).Collection("caches")
+	cc := dbClient.Database(appCfg.DB.MapleAuthName).Collection("caches")
 
 	c := mongo.New(cc)
 

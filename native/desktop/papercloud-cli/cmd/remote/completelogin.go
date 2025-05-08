@@ -1,10 +1,11 @@
-// native/desktop/papercloud-cli/cmd/remote/login.go
+// native/desktop/papercloud-cli/cmd/remote/completelogin.go
 package remote
 
 import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/Maple-Open-Tech/monorepo/native/desktop/papercloud-cli/pkg/e2ee"
 	"github.com/spf13/cobra"
@@ -54,18 +55,20 @@ Examples:
 				log.Fatalf("Failed verify and complete login: %v", err)
 			}
 
+			// Save all token information including expiry times
 			if err := preferences.SetLoginResponse(
 				loginResponse.AccessToken,
-				loginResponse.AccessTokenExpiryTime,
+				loginResponse.AccessTokenExpiryTime, // Make sure we're passing the expiry time
 				loginResponse.RefreshToken,
-				loginResponse.RefreshTokenExpiryTime,
+				loginResponse.RefreshTokenExpiryTime, // Make sure we're passing the expiry time
 			); err != nil {
 				log.Fatalf("Failed to set login response in preferences: %v", err)
 			}
 
 			fmt.Println("Login successful!")
 			fmt.Printf("Access Token: %s\n", loginResponse.AccessToken)
-			// Optionally print other relevant info, but be careful with sensitive data like refresh tokens or keys in logs.
+			fmt.Printf("Access Token Expires: %s\n", loginResponse.AccessTokenExpiryTime.Format(time.RFC3339))
+			fmt.Printf("Refresh Token Expires: %s\n", loginResponse.RefreshTokenExpiryTime.Format(time.RFC3339))
 		},
 	}
 

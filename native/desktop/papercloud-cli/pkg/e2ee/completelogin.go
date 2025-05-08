@@ -23,12 +23,6 @@ type LoginResponse struct {
 	AccessTokenExpiryTime  time.Time `json:"access_token_expiry_time"`
 	RefreshToken           string    `json:"refresh_token"`
 	RefreshTokenExpiryTime time.Time `json:"refresh_token_expiry_time"`
-
-	MasterKeyEncrypted   string // e.g., the encrypted master key
-	MasterKeySalt        string // salt used for key derivation
-	RecoveryKeyEncrypted string // encrypted recovery key
-	PublicKey            string // user's public key
-	PrivateKeyEncrypted  string // encrypted private key
 }
 
 // VerifyPasswordAndCompleteLogin verifies password locally and completes the login

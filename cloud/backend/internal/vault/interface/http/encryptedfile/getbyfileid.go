@@ -36,7 +36,7 @@ func NewGetEncryptedFileByFileIDHandler(
 
 // Pattern returns the URL pattern for this handler
 func (h *GetEncryptedFileByFileIDHandler) Pattern() string {
-	return "GET /api/v1/encrypted-files/by-file-id/{fileId}"
+	return "GET /api/v1/files-by-client-id/{fileId}"
 }
 
 // ServeHTTP handles HTTP requests
@@ -55,8 +55,8 @@ func (h *GetEncryptedFileByFileIDHandler) ServeHTTP(w http.ResponseWriter, r *ht
 		return
 	}
 
-	// Extract file ID from URL path
-	parts := r.URL.Path[len("/api/v1/encrypted-files/by-file-id/"):]
+	// Extract file ID from URL path - updated to match new pattern
+	parts := r.URL.Path[len("/api/v1/files-by-client-id/"):]
 	if parts == "" {
 		httperror.ResponseError(w, httperror.NewForBadRequestWithSingleField("file_id", "File ID is required"))
 		return

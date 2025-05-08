@@ -34,6 +34,7 @@ func RemoteCmd() *cobra.Command {
 	cmd.AddCommand(VerifyLoginOneTimeTokenUserCmd())
 	cmd.AddCommand(CompleteLoginCmd())
 	cmd.AddCommand(MeCmd())
+	cmd.AddCommand(UploadFileCmd())
 	// cmd.AddCommand(LogoutUserCmd())
 
 	return cmd

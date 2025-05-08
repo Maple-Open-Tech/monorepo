@@ -55,6 +55,7 @@ require (
 	github.com/mailgun/errors v0.4.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/oschwald/maxminddb-golang v1.13.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect

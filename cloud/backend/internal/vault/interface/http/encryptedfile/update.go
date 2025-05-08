@@ -3,6 +3,7 @@ package encryptedfile
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 
@@ -70,36 +71,21 @@ func (h *UpdateEncryptedFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Re
 	encryptedHash := r.FormValue("encrypted_hash")
 
 	// Get file content (optional for updates)
-	var file *http.File
-	_, fileHeader, err := r.FormFile("encrypted_content")
+	var fileContent io.Reader
+	file, fileHeader, err := r.FormFile("encrypted_content")
 	if err == nil && fileHeader != nil {
-		f, err := fileHeader.Open()
-		if err != nil {
-			// error handling
-		}
-		file = &f // This line is causing the error
-		defer (*file).Close()
+		fileContent = file
+		defer file.Close()
 	}
 
 	// Call service to update the file
-	var result interface{}
-	if file != nil {
-		result, err = h.updateService.Execute(
-			ctx,
-			id,
-			encryptedMetadata,
-			encryptedHash,
-			*file,
-		)
-	} else {
-		result, err = h.updateService.Execute(
-			ctx,
-			id,
-			encryptedMetadata,
-			encryptedHash,
-			nil,
-		)
-	}
+	result, err := h.updateService.Execute(
+		ctx,
+		id,
+		encryptedMetadata,
+		encryptedHash,
+		fileContent,
+	)
 
 	if err != nil {
 		h.logger.Error("Failed to update encrypted file", zap.Error(err))
@@ -108,19 +94,18 @@ func (h *UpdateEncryptedFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Re
 	}
 
 	// Return success response
-	updatedFile := result.(*domain.EncryptedFile)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
 	response := FileResponse{
-		ID:                updatedFile.ID,
-		UserID:            updatedFile.UserID,
-		FileID:            updatedFile.FileID,
-		EncryptedMetadata: updatedFile.EncryptedMetadata,
-		EncryptionVersion: updatedFile.EncryptionVersion,
-		EncryptedHash:     updatedFile.EncryptedHash,
-		CreatedAt:         updatedFile.CreatedAt,
-		ModifiedAt:        updatedFile.ModifiedAt,
+		ID:                result.ID,
+		UserID:            result.UserID,
+		FileID:            result.FileID,
+		EncryptedMetadata: result.EncryptedMetadata,
+		EncryptionVersion: result.EncryptionVersion,
+		EncryptedHash:     result.EncryptedHash,
+		CreatedAt:         result.CreatedAt,
+		ModifiedAt:        result.ModifiedAt,
 	}
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {

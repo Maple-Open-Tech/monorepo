@@ -15,11 +15,11 @@ func Module() fx.Option {
 			unifiedhttp.AsRoute(encryptedfile.NewCreateEncryptedFileHandler),
 			unifiedhttp.AsRoute(encryptedfile.NewGetEncryptedFileByIDHandler),
 			unifiedhttp.AsRoute(encryptedfile.NewGetEncryptedFileByFileIDHandler),
-			// // unifiedhttp.AsRoute(encryptedfile.NewUpdateEncryptedFileHandler),
+			unifiedhttp.AsRoute(encryptedfile.NewUpdateEncryptedFileHandler),
 			unifiedhttp.AsRoute(encryptedfile.NewDeleteEncryptedFileHandler),
 			unifiedhttp.AsRoute(encryptedfile.NewListEncryptedFilesHandler),
-			// unifiedhttp.AsRoute(encryptedfile.NewDownloadEncryptedFileHandler),
-			// unifiedhttp.AsRoute(encryptedfile.NewGetEncryptedFileDownloadURLHandler),
+			unifiedhttp.AsRoute(encryptedfile.NewDownloadEncryptedFileHandler),
+			unifiedhttp.AsRoute(encryptedfile.NewGetEncryptedFileDownloadURLHandler),
 		),
 	)
 }

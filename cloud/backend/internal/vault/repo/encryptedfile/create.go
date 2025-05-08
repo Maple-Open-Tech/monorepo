@@ -34,6 +34,12 @@ func (repo *encryptedFileRepository) Create(
 	storagePath := fmt.Sprintf("%s/%s", userID, file.FileID)
 	file.StoragePath = storagePath
 
+	// Save metadata to MongoDB collection
+	_, err := repo.collection.InsertOne(ctx, file)
+	if err != nil {
+		return fmt.Errorf("failed to save encrypted file metadata: %w", err)
+	}
+
 	repo.logger.Debug("Successfully created encrypted file",
 		zap.String("id", file.ID.Hex()),
 		zap.String("userID", userID),

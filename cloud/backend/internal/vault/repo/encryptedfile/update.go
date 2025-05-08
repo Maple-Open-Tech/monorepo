@@ -7,7 +7,6 @@ import (
 	"io"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.uber.org/zap"
 
@@ -37,33 +36,8 @@ func (repo *encryptedFileRepository) UpdateByID(
 	// Use the existing storage path
 	file.StoragePath = existingFile.StoragePath
 
-	// If a new encrypted content is provided, update the file in GridFS
-	if encryptedContent != nil {
-		// Delete the existing file from GridFS
-		cursor, err := repo.database.Collection("encryptedFiles.files").Find(
-			ctx,
-			bson.M{"filename": existingFile.StoragePath},
-		)
-		if err != nil {
-			repo.logger.Error("Failed to find existing GridFS file", zap.Error(err))
-		} else {
-			var existingFiles []struct {
-				ID primitive.ObjectID `bson:"_id"`
-			}
-			if err := cursor.All(ctx, &existingFiles); err == nil {
-
-			}
-			cursor.Close(ctx)
-		}
-
-		if err != nil {
-			return fmt.Errorf("failed to open GridFS upload stream: %w", err)
-		}
-
-	} else {
-		// If no new content, keep the existing size
-		file.EncryptedSize = existingFile.EncryptedSize
-	}
+	// If no new content, keep the existing size
+	file.EncryptedSize = existingFile.EncryptedSize
 
 	// Update the metadata in MongoDB
 	_, err = repo.collection.ReplaceOne(

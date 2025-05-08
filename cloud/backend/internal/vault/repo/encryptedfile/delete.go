@@ -25,7 +25,7 @@ func (repo *encryptedFileRepository) DeleteByID(
 		return fmt.Errorf("file not found")
 	}
 
-	// Delete from MongoDB first
+	// Delete from MongoDB collection
 	_, err = repo.collection.DeleteOne(ctx, bson.M{"_id": id})
 	if err != nil {
 		return fmt.Errorf("failed to delete encrypted file metadata: %w", err)

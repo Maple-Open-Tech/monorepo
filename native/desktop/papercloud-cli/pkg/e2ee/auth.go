@@ -37,6 +37,7 @@ func init() {
 }
 
 // IsAuthenticated checks if the user is authenticated with valid tokens
+// and automatically attempts to refresh the token if expired
 func (c *Client) IsAuthenticated() bool {
 	logger.Debug("Checking authentication status")
 	preferences := pref.PreferencesInstance()
@@ -52,13 +53,40 @@ func (c *Client) IsAuthenticated() bool {
 
 	// Check token expiry
 	if time.Now().After(preferences.LoginResponse.AccessTokenExpiryTime) {
-		logger.Info("User not authenticated: AccessToken expired",
+		logger.Info("Access token expired",
 			zap.Time("expiry_time", preferences.LoginResponse.AccessTokenExpiryTime),
 			zap.Time("current_time", time.Now()))
-		return false
+
+		// Check if refresh token exists and is not expired
+		if preferences.LoginResponse.RefreshToken == "" {
+			logger.Info("No refresh token available")
+			return false
+		}
+
+		if time.Now().After(preferences.LoginResponse.RefreshTokenExpiryTime) {
+			logger.Info("Refresh token expired",
+				zap.Time("refresh_expiry_time", preferences.LoginResponse.RefreshTokenExpiryTime))
+			return false
+		}
+
+		// Try to refresh the tokens
+		logger.Info("Attempting to refresh tokens")
+		success, err := c.RefreshTokens()
+		if err != nil {
+			logger.Error("Failed to refresh tokens", zap.Error(err))
+			return false
+		}
+
+		if !success {
+			logger.Info("Token refresh was not successful")
+			return false
+		}
+
+		logger.Info("Successfully refreshed tokens")
+		return true // Successfully refreshed tokens
 	}
 
-	logger.Debug("User is authenticated")
+	logger.Debug("User is authenticated with valid tokens")
 	return true
 }
 

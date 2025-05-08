@@ -36,7 +36,7 @@ func NewCreateEncryptedFileHandler(
 
 // Pattern returns the URL pattern for this handler
 func (h *CreateEncryptedFileHandler) Pattern() string {
-	return "POST /api/v1/encrypted-files"
+	return "POST /vault/api/v1/encrypted-files"
 }
 
 // ServeHTTP handles HTTP requests

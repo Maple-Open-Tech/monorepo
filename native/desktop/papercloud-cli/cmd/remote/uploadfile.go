@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/native/desktop/papercloud-cli/pkg/e2ee"
 )
@@ -28,84 +29,128 @@ your data remains secure and private. You can also provide metadata
 for the file that will be encrypted along with the content.
 
 Examples:
-  # Basic upload with minimal metadata
-  papercloud-cli remote upload-file --file /path/to/file.pdf
+		# Basic upload with minimal metadata
+		papercloud-cli remote upload-file --file /path/to/file.pdf
 
-  # Upload with description and tags
-  papercloud-cli remote upload-file --file /path/to/file.pdf --description "Important document" --tags "work,private,important"
+		# Upload with description and tags
+		papercloud-cli remote upload-file --file /path/to/file.pdf --description "Important document" --tags "work,private,important"
 
-  # Upload with custom metadata
-  papercloud-cli remote upload-file --file /path/to/file.pdf --custom '{"project":"Project X","department":"Finance"}'
+		# Upload with custom metadata
+		papercloud-cli remote upload-file --file /path/to/file.pdf --custom '{"project":"Project X","department":"Finance"}'
 `,
 		Run: func(cmd *cobra.Command, args []string) {
+			logger, _ := zap.NewDevelopment()
+			defer logger.Sync() // flushes buffer, if any
+			sugar := logger.Sugar()
+
+			sugar.Info("Starting upload-file command")
+
 			// Check if file exists
 			if filePath == "" {
-				fmt.Println("Error: File path is required")
+				sugar.Error("File path is required")
+				fmt.Println("Error: File path is required") // Keep user-facing fmt.Println for direct error messages
 				return
 			}
+			sugar.Infof("File path provided: %s", filePath)
 
 			fileInfo, err := os.Stat(filePath)
 			if err != nil {
-				fmt.Printf("Error: Failed to access file: %v\n", err)
+				sugar.Errorf("Failed to access file: %v", err)
+				fmt.Printf("Error: Failed to access file: %v\n", err) // Keep user-facing fmt.Printf
 				return
 			}
 			if fileInfo == nil {
-				fmt.Println("fileInfo does not exist")
+				sugar.Error("fileInfo is nil, though os.Stat did not return an error. This should not happen.")
+				fmt.Println("Error: File information could not be retrieved.") // Keep user-facing fmt.Println
 				return
 			}
+			sugar.Infof("File %s accessed successfully, size: %d bytes, modTime: %s", filePath, fileInfo.Size(), fileInfo.ModTime())
 
 			// Create E2EE client
-			client := createE2EEClient()
+			sugar.Info("Creating E2EE client")
+			client := createE2EEClient() // Assuming createE2EEClient might have its own logging
 
 			// Check authentication
+			sugar.Info("Checking authentication status")
 			if !client.IsAuthenticated() {
+				sugar.Warn("User is not authenticated or session expired")
 				fmt.Println("Your session has expired or you are not logged in.")
 				fmt.Println("Please login again before uploading files.")
 				fmt.Println("You can login using: papercloud-cli remote login")
 				return
 			}
+			sugar.Info("User is authenticated")
+
 			// Prepare file metadata
+			sugar.Info("Preparing file metadata")
+			determinedContentType := determineContentType(filePath, contentType)
 			metadata := &e2ee.FileMetadata{
 				Filename:     filepath.Base(filePath),
 				OriginalSize: fileInfo.Size(),
-				ContentType:  determineContentType(filePath, contentType),
+				ContentType:  determinedContentType,
 				CreatedAt:    time.Now(),
 				ModifiedAt:   fileInfo.ModTime(),
 				Description:  description,
 			}
+			sugar.Infow("Initial metadata prepared",
+				"filename", metadata.Filename,
+				"originalSize", metadata.OriginalSize,
+				"contentType", metadata.ContentType,
+				"createdAt", metadata.CreatedAt,
+				"modifiedAt", metadata.ModifiedAt,
+				"description", metadata.Description,
+			)
 
 			// Process tags if provided
 			if tags != "" {
+				sugar.Infof("Processing tags: %s", tags)
 				metadata.Tags = strings.Split(tags, ",")
 				// Trim whitespace from each tag
 				for i, tag := range metadata.Tags {
 					metadata.Tags[i] = strings.TrimSpace(tag)
 				}
+				sugar.Infof("Processed tags: %v", metadata.Tags)
+			} else {
+				sugar.Info("No tags provided")
 			}
 
 			// Process custom metadata if provided
 			if customMetadata != "" {
+				sugar.Infof("Processing custom metadata: %s", customMetadata)
 				var customMap map[string]string
 				err := json.Unmarshal([]byte(customMetadata), &customMap)
 				if err != nil {
-					fmt.Printf("Error: Invalid custom metadata format: %v\n", err)
+					sugar.Errorf("Invalid custom metadata format: %v", err)
+					fmt.Printf("Error: Invalid custom metadata format: %v\n", err) // Keep user-facing fmt.Printf
 					return
 				}
 				metadata.CustomMetadata = customMap
+				sugar.Infof("Processed custom metadata: %v", metadata.CustomMetadata)
+			} else {
+				sugar.Info("No custom metadata provided")
 			}
 
 			// Generate a unique file ID
+			sugar.Info("Generating file ID")
 			fileID := generateFileID(filePath, *metadata)
-			fmt.Printf("Generated file ID: %s\n", fileID)
+			sugar.Infof("Generated file ID: %s", fileID)
+			fmt.Printf("Generated file ID: %s\n", fileID) // Keep user-facing fmt.Printf
 
 			// Upload the file
-			fmt.Println("Starting file encryption and upload...")
+			sugar.Info("Starting file encryption and upload process")
+			fmt.Println("Starting file encryption and upload...") // Keep user-facing fmt.Println
 			response, err := client.UploadEncryptedFile(filePath, fileID, metadata)
 			if err != nil {
-				fmt.Printf("Error: Failed to encrypt and upload file: %v\n", err)
+				sugar.Errorf("Failed to encrypt and upload file: %v", err)
+				fmt.Printf("Error: Failed to encrypt and upload file: %v\n", err) // Keep user-facing fmt.Printf
 				return
 			}
 
+			sugar.Infow("File successfully encrypted and uploaded",
+				"serverID", response.ID,
+				"fileID", response.FileID,
+				"createdAt", response.CreatedAt,
+			)
 			fmt.Println("File successfully encrypted and uploaded!")
 			fmt.Printf("Server ID: %s\n", response.ID)
 			fmt.Printf("File ID: %s\n", response.FileID)
@@ -128,6 +173,8 @@ Examples:
 
 // determineContentType attempts to determine the content type of a file
 func determineContentType(filePath, providedType string) string {
+	// No need for extensive logging here as it's a simple utility function,
+	// but could add if debugging content type issues.
 	if providedType != "" {
 		return providedType
 	}
@@ -154,6 +201,7 @@ func determineContentType(filePath, providedType string) string {
 
 // generateFileID creates a unique ID for the file
 func generateFileID(filePath string, metadata e2ee.FileMetadata) string {
+	// No need for extensive logging here as it's a simple utility function.
 	// Create a unique identifier based on file path, size, and current time
 	uniqueStr := fmt.Sprintf("%s_%d_%d", filePath, metadata.OriginalSize, time.Now().UnixNano())
 

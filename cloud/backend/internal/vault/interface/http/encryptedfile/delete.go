@@ -35,7 +35,7 @@ func NewDeleteEncryptedFileHandler(
 
 // Pattern returns the URL pattern for this handler
 func (h *DeleteEncryptedFileHandler) Pattern() string {
-	return "DELETE /api/v1/encrypted-files/{id}"
+	return "DELETE /vault/api/v1/encrypted-files/{id}"
 }
 
 // ServeHTTP handles HTTP requests

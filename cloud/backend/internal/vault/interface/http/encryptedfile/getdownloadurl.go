@@ -38,7 +38,7 @@ func NewGetEncryptedFileDownloadURLHandler(
 
 // Pattern returns the URL pattern for this handler
 func (h *GetEncryptedFileDownloadURLHandler) Pattern() string {
-	return "GET /api/v1/encrypted-files/{id}/url"
+	return "GET /vault/api/v1/encrypted-files/{id}/url"
 }
 
 // ServeHTTP handles HTTP requests

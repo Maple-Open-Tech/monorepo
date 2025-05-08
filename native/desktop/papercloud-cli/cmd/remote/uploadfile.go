@@ -39,7 +39,7 @@ Examples:
 		papercloud-cli remote upload-file --file /path/to/file.pdf --custom '{"project":"Project X","department":"Finance"}'
 `,
 		Run: func(cmd *cobra.Command, args []string) {
-			logger, _ := zap.NewDevelopment()
+			logger, _ := zap.NewProduction()
 			defer logger.Sync() // flushes buffer, if any
 			sugar := logger.Sugar()
 

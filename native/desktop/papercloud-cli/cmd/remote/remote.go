@@ -33,6 +33,7 @@ func RemoteCmd() *cobra.Command {
 	cmd.AddCommand(RequestLoginOneTimeTokenUserCmd())
 	cmd.AddCommand(VerifyLoginOneTimeTokenUserCmd())
 	cmd.AddCommand(CompleteLoginCmd())
+	cmd.AddCommand(MeCmd())
 	// cmd.AddCommand(LogoutUserCmd())
 
 	return cmd

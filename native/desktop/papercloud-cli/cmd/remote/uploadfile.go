@@ -11,7 +11,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	pref "github.com/Maple-Open-Tech/monorepo/native/desktop/papercloud-cli/internal/common/preferences"
 	"github.com/Maple-Open-Tech/monorepo/native/desktop/papercloud-cli/pkg/e2ee"
 )
 
@@ -50,17 +49,21 @@ Examples:
 				fmt.Printf("Error: Failed to access file: %v\n", err)
 				return
 			}
-
-			// Check if user is authenticated
-			preferences := pref.PreferencesInstance()
-			if preferences.LoginResponse == nil || preferences.LoginResponse.AccessToken == "" {
-				fmt.Println("Error: You need to be logged in to upload files. Please login first.")
+			if fileInfo == nil {
+				fmt.Println("fileInfo does not exist")
 				return
 			}
 
 			// Create E2EE client
 			client := createE2EEClient()
 
+			// Check authentication
+			if !client.IsAuthenticated() {
+				fmt.Println("Your session has expired or you are not logged in.")
+				fmt.Println("Please login again before uploading files.")
+				fmt.Println("You can login using: papercloud-cli remote login")
+				return
+			}
 			// Prepare file metadata
 			metadata := &e2ee.FileMetadata{
 				Filename:     filepath.Base(filePath),

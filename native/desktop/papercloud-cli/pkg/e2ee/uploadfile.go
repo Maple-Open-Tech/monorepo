@@ -2,15 +2,13 @@
 package e2ee
 
 import (
-	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"time"
-
-	pref "github.com/Maple-Open-Tech/monorepo/native/desktop/papercloud-cli/internal/common/preferences"
 )
 
 // FileMetadata represents the structure for file metadata
@@ -35,9 +33,8 @@ type UploadFileResponse struct {
 // UploadEncryptedFile handles the file encryption and upload process
 func (c *Client) UploadEncryptedFile(filePath string, fileID string, metadata *FileMetadata) (*UploadFileResponse, error) {
 	// Check authentication
-	preferences := pref.PreferencesInstance()
-	if preferences.LoginResponse == nil || preferences.LoginResponse.AccessToken == "" {
-		return nil, fmt.Errorf("not authenticated: please login first")
+	if !c.IsAuthenticated() {
+		return nil, fmt.Errorf("not authenticated or token expired: please login again")
 	}
 
 	// Check if file exists
@@ -45,9 +42,9 @@ func (c *Client) UploadEncryptedFile(filePath string, fileID string, metadata *F
 	if err != nil {
 		return nil, fmt.Errorf("failed to access file: %w", err)
 	}
-
-	// Set file size in metadata
-	metadata.OriginalSize = fileInfo.Size()
+	if fileInfo == nil {
+		return nil, fmt.Errorf("file does not exist")
+	}
 
 	// Open file for reading
 	file, err := os.Open(filePath)
@@ -56,14 +53,51 @@ func (c *Client) UploadEncryptedFile(filePath string, fileID string, metadata *F
 	}
 	defer file.Close()
 
-	// Encrypt file content
-	encryptedFile, encryptedMetadata, encryptedHash, err := c.encryptFileAndMetadata(file, metadata)
+	// Create a temporary file for encrypted content
+	tempFile, err := os.CreateTemp("", "encrypted-*")
 	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt file: %w", err)
+		return nil, fmt.Errorf("failed to create temp file: %w", err)
 	}
-	defer encryptedFile.Close()
+	defer os.Remove(tempFile.Name())
+	defer tempFile.Close()
 
-	// Prepare form data for upload
+	// For now, we're just copying the file content directly
+	// In a real implementation, we would encrypt it here
+	if _, err := io.Copy(tempFile, file); err != nil {
+		return nil, fmt.Errorf("failed to process file: %w", err)
+	}
+
+	// Generate a simple hash of the file
+	if _, err := tempFile.Seek(0, 0); err != nil {
+		return nil, fmt.Errorf("failed to reset file position: %w", err)
+	}
+
+	hasher := sha256.New()
+	if _, err := io.Copy(hasher, tempFile); err != nil {
+		return nil, fmt.Errorf("failed to calculate hash: %w", err)
+	}
+	encryptedHash := base64.StdEncoding.EncodeToString(hasher.Sum(nil))
+
+	// Serialize metadata
+	metadataBytes, err := json.Marshal(metadata)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+	encryptedMetadata := base64.StdEncoding.EncodeToString(metadataBytes)
+
+	// Prepare for upload
+	if _, err := tempFile.Seek(0, 0); err != nil {
+		return nil, fmt.Errorf("failed to reset file position: %w", err)
+	}
+
+	// Open the encrypted file for reading
+	encryptedFileReader, err := os.Open(tempFile.Name())
+	if err != nil {
+		return nil, fmt.Errorf("failed to open encrypted file: %w", err)
+	}
+	defer encryptedFileReader.Close()
+
+	// Prepare form data
 	formData := map[string]string{
 		"file_id":            fileID,
 		"encrypted_metadata": encryptedMetadata,
@@ -71,20 +105,13 @@ func (c *Client) UploadEncryptedFile(filePath string, fileID string, metadata *F
 		"encryption_version": "1.0",
 	}
 
-	// Reopen the encrypted file for upload
-	encryptedFileReader, err := os.Open(encryptedFile.Name())
-	if err != nil {
-		return nil, fmt.Errorf("failed to open encrypted file: %w", err)
-	}
-	defer encryptedFileReader.Close()
-
-	// Prepare files for upload
+	// Prepare files
 	formFiles := map[string]io.Reader{
 		"encrypted_content": encryptedFileReader,
 	}
 
-	// Upload the file using authenticated form request
-	response, err := c.AuthenticatedFormRequest(
+	// Send the authenticated form request
+	responseBytes, err := c.AuthenticatedFormRequest(
 		"POST",
 		"/api/v1/encrypted-files",
 		formData,
@@ -94,83 +121,11 @@ func (c *Client) UploadEncryptedFile(filePath string, fileID string, metadata *F
 		return nil, fmt.Errorf("failed to upload file: %w", err)
 	}
 
-	// Parse response
-	var uploadResponse UploadFileResponse
-	if err := json.Unmarshal(response, &uploadResponse); err != nil {
-		return nil, fmt.Errorf("failed to parse upload response: %w", err)
+	// Parse the response
+	var response UploadFileResponse
+	if err := json.Unmarshal(responseBytes, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
-	return &uploadResponse, nil
-}
-
-// encryptFileAndMetadata encrypts the file and metadata
-func (c *Client) encryptFileAndMetadata(fileReader io.Reader, metadata *FileMetadata) (*os.File, string, string, error) {
-	// Get preferences for encryption keys
-	preferences := pref.PreferencesInstance()
-	if preferences.VerifyOTTResponse == nil {
-		return nil, "", "", fmt.Errorf("no encryption keys available, please login first")
-	}
-
-	// Create a temporary file for encrypted content
-	tempFile, err := os.CreateTemp("", "encrypted-*")
-	if err != nil {
-		return nil, "", "", fmt.Errorf("failed to create temp file: %w", err)
-	}
-
-	// Generate a random file key
-	fileKey := make([]byte, 32)
-	if _, err := rand.Read(fileKey); err != nil {
-		tempFile.Close()
-		os.Remove(tempFile.Name())
-		return nil, "", "", fmt.Errorf("failed to generate file key: %w", err)
-	}
-
-	// Create a buffer for the encrypted content
-	// In a real implementation, you would:
-	// 1. Generate a nonce
-	// 2. Encrypt the file with the file key using the nonce
-	// 3. Encrypt the file key with the master key
-
-	// For this simplified version, just copy the file
-	if _, err := io.Copy(tempFile, fileReader); err != nil {
-		tempFile.Close()
-		os.Remove(tempFile.Name())
-		return nil, "", "", fmt.Errorf("failed to encrypt file content: %w", err)
-	}
-
-	// Reset file position for hash calculation
-	if _, err := tempFile.Seek(0, 0); err != nil {
-		tempFile.Close()
-		os.Remove(tempFile.Name())
-		return nil, "", "", fmt.Errorf("failed to reset file position: %w", err)
-	}
-
-	// Calculate hash (simplified)
-	hashBytes := make([]byte, 32)
-	if _, err := rand.Read(hashBytes); err != nil {
-		tempFile.Close()
-		os.Remove(tempFile.Name())
-		return nil, "", "", fmt.Errorf("failed to generate hash: %w", err)
-	}
-	encryptedHash := base64.StdEncoding.EncodeToString(hashBytes)
-
-	// Encrypt metadata with file key
-	metadataBytes, err := json.Marshal(metadata)
-	if err != nil {
-		tempFile.Close()
-		os.Remove(tempFile.Name())
-		return nil, "", "", fmt.Errorf("failed to marshal metadata: %w", err)
-	}
-
-	// In a real implementation, encrypt the metadata with the file key
-	encryptedMetadata := base64.StdEncoding.EncodeToString(metadataBytes)
-
-	// Reset file position for reading
-	if _, err := tempFile.Seek(0, 0); err != nil {
-		tempFile.Close()
-		os.Remove(tempFile.Name())
-		return nil, "", "", fmt.Errorf("failed to reset file position: %w", err)
-	}
-
-	return tempFile, encryptedMetadata, encryptedHash, nil
+	return &response, nil
 }

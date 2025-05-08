@@ -14,19 +14,10 @@ import (
 
 // RefreshTokenRequest is the payload for token refresh
 type RefreshTokenRequest struct {
-	RefreshToken string `json:"refresh_token"`
-}
-
-// RefreshTokenResponse is the server's response to token refresh
-type RefreshTokenResponse struct {
-	AccessToken            string    `json:"access_token"`
-	AccessTokenExpiryTime  time.Time `json:"access_token_expiry_time"`
-	RefreshToken           string    `json:"refresh_token"`
-	RefreshTokenExpiryTime time.Time `json:"refresh_token_expiry_time"`
+	Value string `json:"value"` // Server expects "value", not "refresh_token"
 }
 
 // RefreshTokens attempts to refresh the access token using the refresh token
-// Returns true if successful, false otherwise
 func (c *Client) RefreshTokens() (bool, error) {
 	// Get current preferences
 	preferences := pref.PreferencesInstance()
@@ -39,7 +30,7 @@ func (c *Client) RefreshTokens() (bool, error) {
 
 	// Create refresh token request payload
 	payload := &RefreshTokenRequest{
-		RefreshToken: preferences.LoginResponse.RefreshToken,
+		Value: preferences.LoginResponse.RefreshToken, // Key changed to "value"
 	}
 
 	// Get the HTTP client to use
@@ -48,7 +39,7 @@ func (c *Client) RefreshTokens() (bool, error) {
 		client = defaultHTTPClient()
 	}
 
-	// Prepare server URL
+	// Prepare server URL - this should match your API endpoint exactly
 	serverURL := c.Config.ServerURL
 	if serverURL == "" {
 		serverURL = DefaultServerURL
@@ -68,6 +59,9 @@ func (c *Client) RefreshTokens() (bool, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
+	// Add logging for debugging
+	fmt.Printf("Refreshing token at endpoint: %s\n", endpoint)
+
 	// Send request
 	resp, err := client.Do(req)
 	if err != nil {
@@ -81,6 +75,9 @@ func (c *Client) RefreshTokens() (bool, error) {
 		return false, fmt.Errorf("failed to read response body: %w", err)
 	}
 
+	// Log response for debugging
+	fmt.Printf("Token refresh response status: %d\n", resp.StatusCode)
+
 	// Check response status
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 		return false, fmt.Errorf("refresh token failed with status %d: %s",
@@ -88,7 +85,13 @@ func (c *Client) RefreshTokens() (bool, error) {
 	}
 
 	// Parse the response
-	var response RefreshTokenResponse
+	var response struct {
+		AccessToken            string    `json:"access_token"`
+		AccessTokenExpiryTime  time.Time `json:"access_token_expiry_time"`
+		RefreshToken           string    `json:"refresh_token"`
+		RefreshTokenExpiryTime time.Time `json:"refresh_token_expiry_time"`
+	}
+
 	if err := json.Unmarshal(body, &response); err != nil {
 		return false, fmt.Errorf("failed to parse refresh token response: %w", err)
 	}
@@ -104,5 +107,6 @@ func (c *Client) RefreshTokens() (bool, error) {
 		return false, fmt.Errorf("failed to save refreshed tokens: %w", err)
 	}
 
+	fmt.Println("Token refreshed successfully")
 	return true, nil
 }

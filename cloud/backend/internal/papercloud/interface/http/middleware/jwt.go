@@ -1,8 +1,10 @@
+// monorepo/cloud/backend/internal/papercloud/interface/http/middleware/jwt.go
 package middleware
 
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -17,6 +19,7 @@ func (mid *middleware) JWTProcessorMiddleware(fn http.HandlerFunc) http.HandlerF
 		reqToken := r.Header.Get("Authorization")
 
 		// For debugging purposes.
+		log.Printf("monorepo/cloud/backend/internal/papercloud/interface/http/middleware/jwt.go --> reqToken: %v\n", reqToken)
 
 		// Before running our JWT middleware we need to confirm there is an
 		// an `Authorization` header to run our middleware. This is an important
@@ -26,6 +29,7 @@ func (mid *middleware) JWTProcessorMiddleware(fn http.HandlerFunc) http.HandlerF
 			// Special thanks to "poise" via https://stackoverflow.com/a/44700761
 			splitToken := strings.Split(reqToken, "JWT ")
 			if len(splitToken) < 2 {
+				log.Println("########################################################################")
 				http.Error(w, "not properly formatted authorization header", http.StatusBadRequest)
 				return
 			}

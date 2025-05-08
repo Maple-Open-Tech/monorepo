@@ -13,32 +13,32 @@ import (
 	pref "github.com/Maple-Open-Tech/monorepo/native/desktop/papercloud-cli/internal/common/preferences"
 )
 
-// AuthenticatedRequest sends an authenticated request to the server
-func (c *Client) AuthenticatedRequest(method, endpoint string, payload interface{}) ([]byte, error) {
-	// Get preferences instance
+// IsAuthenticated checks if the user is authenticated with valid tokens
+func (c *Client) IsAuthenticated() bool {
 	preferences := pref.PreferencesInstance()
 
-	// Check if user is authenticated
-	if preferences.LoginResponse == nil || preferences.LoginResponse.AccessToken == "" {
-		return nil, fmt.Errorf("not authenticated: please login first")
+	// Check if tokens exist and are not expired
+	if preferences.LoginResponse == nil ||
+		preferences.LoginResponse.AccessToken == "" {
+		return false
 	}
 
-	// Check if access token is expired
+	// Check token expiry
 	if time.Now().After(preferences.LoginResponse.AccessTokenExpiryTime) {
-		// Try to refresh the token
-		if preferences.LoginResponse.RefreshToken == "" {
-			return nil, fmt.Errorf("session expired and no refresh token available")
-		}
-
-		// Attempt to refresh token
-		success, err := c.RefreshTokens()
-		if err != nil || !success {
-			return nil, fmt.Errorf("session expired and token refresh failed: %w", err)
-		}
-
-		// Reload preferences with updated tokens
-		preferences = pref.PreferencesInstance()
+		return false
 	}
+
+	return true
+}
+
+// AuthenticatedRequest sends an authenticated request to the server
+func (c *Client) AuthenticatedRequest(method, endpoint string, payload interface{}) ([]byte, error) {
+	// Check authentication
+	if !c.IsAuthenticated() {
+		return nil, fmt.Errorf("not authenticated or token expired: please login again")
+	}
+
+	preferences := pref.PreferencesInstance()
 
 	// Get the HTTP client to use
 	client := c.Config.HTTPClient
@@ -99,30 +99,12 @@ func (c *Client) AuthenticatedRequest(method, endpoint string, payload interface
 
 // AuthenticatedFormRequest sends a multipart form request with authentication
 func (c *Client) AuthenticatedFormRequest(method, endpoint string, formData map[string]string, formFiles map[string]io.Reader) ([]byte, error) {
-	// Get preferences instance
+	// Check authentication
+	if !c.IsAuthenticated() {
+		return nil, fmt.Errorf("not authenticated or token expired: please login again")
+	}
+
 	preferences := pref.PreferencesInstance()
-
-	// Check if user is authenticated
-	if preferences.LoginResponse == nil || preferences.LoginResponse.AccessToken == "" {
-		return nil, fmt.Errorf("not authenticated: please login first")
-	}
-
-	// Check if access token is expired
-	if time.Now().After(preferences.LoginResponse.AccessTokenExpiryTime) {
-		// Try to refresh the token
-		if preferences.LoginResponse.RefreshToken == "" {
-			return nil, fmt.Errorf("session expired and no refresh token available")
-		}
-
-		// Attempt to refresh token
-		success, err := c.RefreshTokens()
-		if err != nil || !success {
-			return nil, fmt.Errorf("session expired and token refresh failed: %w", err)
-		}
-
-		// Reload preferences with updated tokens
-		preferences = pref.PreferencesInstance()
-	}
 
 	// Create pipe for streaming the form data
 	pipeReader, pipeWriter := io.Pipe()

@@ -7,8 +7,8 @@ import (
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/vault/domain/encryptedfile"
 )
@@ -23,6 +23,10 @@ func (repo *encryptedFileRepository) GetByID(
 	err := repo.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&file)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, nil // Not found
+		}
+		// Check for no documents error using string comparison since the constant might differ in v2
+		if err.Error() == "mongo: no documents in result" {
 			return nil, nil // Not found
 		}
 		return nil, fmt.Errorf("failed to get encrypted file: %w", err)
@@ -49,6 +53,10 @@ func (repo *encryptedFileRepository) GetByFileID(
 
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, nil // Not found - returns nil, nil which is correct
+		}
+		// Check for no documents error using string comparison since the constant might differ in v2
+		if err.Error() == "mongo: no documents in result" {
 			return nil, nil // Not found
 		}
 		return nil, fmt.Errorf("failed to get encrypted file: %w", err)

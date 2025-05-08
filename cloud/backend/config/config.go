@@ -36,7 +36,8 @@ type AppConfig struct {
 type DBConfig struct {
 	URI            string
 	MapleAuthName  string
-	EncryptionName string
+	VaultName      string
+	PaperCloudName string
 }
 
 type MailgunConfig struct {
@@ -74,7 +75,8 @@ func NewProvider() *Configuration {
 	// --- Database section ---
 	c.DB.URI = getEnv("BACKEND_DB_URI", true)
 	c.DB.MapleAuthName = getEnv("BACKEND_DB_MAPLEAUTH_NAME", true)
-	c.DB.EncryptionName = getEnv("BACKEND_DB_ENCRYPTION_NAME", true)
+	c.DB.VaultName = getEnv("BACKEND_DB_VAULT_NAME", true)
+	c.DB.PaperCloudName = getEnv("BACKEND_DB_PAPERCLOUD_NAME_NAME", true)
 
 	// --- Cache ---
 	c.Cache.URI = getEnv("BACKEND_CACHE_URI", true)

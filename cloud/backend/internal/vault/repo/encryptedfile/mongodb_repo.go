@@ -32,7 +32,7 @@ func NewRepository(
 	dbClient *mongo.Client,
 ) domain.Repository {
 	// Initialize the MongoDB database
-	database := dbClient.Database(cfg.DB.EncryptionName)
+	database := dbClient.Database(cfg.DB.VaultName)
 
 	// Initialize the MongoDB collection for file metadata
 	collection := database.Collection("encrypted_files")

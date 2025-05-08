@@ -3,6 +3,7 @@ package encryptedfile
 
 import (
 	"context"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
@@ -45,10 +46,19 @@ func (s *deleteEncryptedFileServiceImpl) Execute(
 	ctx context.Context,
 	id primitive.ObjectID,
 ) error {
+	// Validate inputs (moved from usecase to service)
+	if id.IsZero() {
+		return httperror.NewForBadRequestWithSingleField("id", "File ID cannot be empty")
+	}
+
 	// First get the file to verify ownership
 	file, err := s.getByIDUseCase.Execute(ctx, id)
 	if err != nil {
-		return err
+		s.logger.Error("Failed to get file for deletion",
+			zap.String("id", id.Hex()),
+			zap.Error(err),
+		)
+		return fmt.Errorf("failed to get file for deletion: %w", err)
 	}
 
 	if file == nil {
@@ -67,5 +77,20 @@ func (s *deleteEncryptedFileServiceImpl) Execute(
 	}
 
 	// Delete the file using the use case
-	return s.deleteUseCase.Execute(ctx, id)
+	err = s.deleteUseCase.Execute(ctx, id)
+	if err != nil {
+		s.logger.Error("Failed to delete encrypted file",
+			zap.String("id", id.Hex()),
+			zap.Error(err),
+		)
+		return fmt.Errorf("failed to delete encrypted file: %w", err)
+	}
+
+	s.logger.Info("Successfully deleted encrypted file",
+		zap.String("id", id.Hex()),
+		zap.String("userID", file.UserID.Hex()),
+		zap.String("fileID", file.FileID),
+	)
+
+	return nil
 }

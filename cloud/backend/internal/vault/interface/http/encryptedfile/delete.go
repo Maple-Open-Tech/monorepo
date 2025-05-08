@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/interface/http/middleware"
 	svc "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/vault/service/encryptedfile"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
@@ -18,6 +19,7 @@ type DeleteEncryptedFileHandler struct {
 	config        *config.Configuration
 	logger        *zap.Logger
 	deleteService svc.DeleteEncryptedFileService
+	middleware    middleware.Middleware
 }
 
 // NewDeleteEncryptedFileHandler creates a new handler for file deletion
@@ -25,11 +27,13 @@ func NewDeleteEncryptedFileHandler(
 	config *config.Configuration,
 	logger *zap.Logger,
 	deleteService svc.DeleteEncryptedFileService,
+	middleware middleware.Middleware,
 ) *DeleteEncryptedFileHandler {
 	return &DeleteEncryptedFileHandler{
 		config:        config,
 		logger:        logger.With(zap.String("handler", "delete-encrypted-file")),
 		deleteService: deleteService,
+		middleware:    middleware,
 	}
 }
 
@@ -40,6 +44,11 @@ func (h *DeleteEncryptedFileHandler) Pattern() string {
 
 // ServeHTTP handles HTTP requests
 func (h *DeleteEncryptedFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Apply MaplesSend middleware before handling the request
+	h.middleware.Attach(h.Execute)(w, r)
+}
+
+func (h *DeleteEncryptedFileHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Extract file ID from URL path

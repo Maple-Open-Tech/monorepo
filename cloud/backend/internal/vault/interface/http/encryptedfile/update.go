@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/interface/http/middleware"
 	svc "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/vault/service/encryptedfile"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
@@ -20,6 +21,7 @@ type UpdateEncryptedFileHandler struct {
 	config        *config.Configuration
 	logger        *zap.Logger
 	updateService svc.UpdateEncryptedFileService
+	middleware    middleware.Middleware
 }
 
 // NewUpdateEncryptedFileHandler creates a new handler for file updates
@@ -27,11 +29,13 @@ func NewUpdateEncryptedFileHandler(
 	config *config.Configuration,
 	logger *zap.Logger,
 	updateService svc.UpdateEncryptedFileService,
+	middleware middleware.Middleware,
 ) *UpdateEncryptedFileHandler {
 	return &UpdateEncryptedFileHandler{
 		config:        config,
 		logger:        logger.With(zap.String("handler", "update-encrypted-file")),
 		updateService: updateService,
+		middleware:    middleware,
 	}
 }
 
@@ -42,6 +46,11 @@ func (h *UpdateEncryptedFileHandler) Pattern() string {
 
 // ServeHTTP handles HTTP requests
 func (h *UpdateEncryptedFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Apply MaplesSend middleware before handling the request
+	h.middleware.Attach(h.Execute)(w, r)
+}
+
+func (h *UpdateEncryptedFileHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Extract file ID from URL path

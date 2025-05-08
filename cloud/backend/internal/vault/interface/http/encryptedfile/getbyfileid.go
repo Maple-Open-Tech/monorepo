@@ -10,6 +10,7 @@ import (
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/interface/http/middleware"
 	svc "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/vault/service/encryptedfile"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
@@ -19,6 +20,7 @@ type GetEncryptedFileByFileIDHandler struct {
 	config             *config.Configuration
 	logger             *zap.Logger
 	getByFileIDService svc.GetEncryptedFileByFileIDService
+	middleware         middleware.Middleware
 }
 
 // NewGetEncryptedFileByFileIDHandler creates a new handler for getting a file by file ID
@@ -26,11 +28,13 @@ func NewGetEncryptedFileByFileIDHandler(
 	config *config.Configuration,
 	logger *zap.Logger,
 	getByFileIDService svc.GetEncryptedFileByFileIDService,
+	middleware middleware.Middleware,
 ) *GetEncryptedFileByFileIDHandler {
 	return &GetEncryptedFileByFileIDHandler{
 		config:             config,
 		logger:             logger.With(zap.String("handler", "get-encrypted-file-by-file-id")),
 		getByFileIDService: getByFileIDService,
+		middleware:         middleware,
 	}
 }
 
@@ -41,6 +45,10 @@ func (h *GetEncryptedFileByFileIDHandler) Pattern() string {
 
 // ServeHTTP handles HTTP requests
 func (h *GetEncryptedFileByFileIDHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.middleware.Attach(h.Execute)(w, r)
+}
+
+func (h *GetEncryptedFileByFileIDHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Check authentication

@@ -10,6 +10,7 @@ import (
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/interface/http/middleware"
 	svc "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/vault/service/encryptedfile"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
@@ -19,6 +20,7 @@ type ListEncryptedFilesHandler struct {
 	config      *config.Configuration
 	logger      *zap.Logger
 	listService svc.ListEncryptedFilesService
+	middleware  middleware.Middleware
 }
 
 // NewListEncryptedFilesHandler creates a new handler for listing files
@@ -26,11 +28,13 @@ func NewListEncryptedFilesHandler(
 	config *config.Configuration,
 	logger *zap.Logger,
 	listService svc.ListEncryptedFilesService,
+	middleware middleware.Middleware,
 ) *ListEncryptedFilesHandler {
 	return &ListEncryptedFilesHandler{
 		config:      config,
 		logger:      logger.With(zap.String("handler", "list-encrypted-files")),
 		listService: listService,
+		middleware:  middleware,
 	}
 }
 
@@ -41,6 +45,11 @@ func (h *ListEncryptedFilesHandler) Pattern() string {
 
 // ServeHTTP handles HTTP requests
 func (h *ListEncryptedFilesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Apply MaplesSend middleware before handling the request
+	h.middleware.Attach(h.Execute)(w, r)
+}
+
+func (h *ListEncryptedFilesHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Check authentication

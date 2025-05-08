@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/interface/http/middleware"
 	svc "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/vault/service/encryptedfile"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
@@ -20,6 +21,7 @@ type DownloadEncryptedFileHandler struct {
 	logger          *zap.Logger
 	downloadService svc.DownloadEncryptedFileService
 	getByIDService  svc.GetEncryptedFileByIDService
+	middleware      middleware.Middleware
 }
 
 // NewDownloadEncryptedFileHandler creates a new handler for file downloads
@@ -28,12 +30,14 @@ func NewDownloadEncryptedFileHandler(
 	logger *zap.Logger,
 	downloadService svc.DownloadEncryptedFileService,
 	getByIDService svc.GetEncryptedFileByIDService,
+	middleware middleware.Middleware,
 ) *DownloadEncryptedFileHandler {
 	return &DownloadEncryptedFileHandler{
 		config:          config,
 		logger:          logger.With(zap.String("handler", "download-encrypted-file")),
 		downloadService: downloadService,
 		getByIDService:  getByIDService,
+		middleware:      middleware,
 	}
 }
 
@@ -44,6 +48,11 @@ func (h *DownloadEncryptedFileHandler) Pattern() string {
 
 // ServeHTTP handles HTTP requests
 func (h *DownloadEncryptedFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Apply MaplesSend middleware before handling the request
+	h.middleware.Attach(h.Execute)(w, r)
+}
+
+func (h *DownloadEncryptedFileHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Extract file ID from URL path

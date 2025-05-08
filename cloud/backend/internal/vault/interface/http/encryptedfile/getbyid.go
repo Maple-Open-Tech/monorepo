@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/interface/http/middleware"
 	svc "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/vault/service/encryptedfile"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
@@ -19,6 +20,7 @@ type GetEncryptedFileByIDHandler struct {
 	config         *config.Configuration
 	logger         *zap.Logger
 	getByIDService svc.GetEncryptedFileByIDService
+	middleware     middleware.Middleware
 }
 
 // NewGetEncryptedFileByIDHandler creates a new handler for getting a file by ID
@@ -26,11 +28,13 @@ func NewGetEncryptedFileByIDHandler(
 	config *config.Configuration,
 	logger *zap.Logger,
 	getByIDService svc.GetEncryptedFileByIDService,
+	middleware middleware.Middleware,
 ) *GetEncryptedFileByIDHandler {
 	return &GetEncryptedFileByIDHandler{
 		config:         config,
 		logger:         logger.With(zap.String("handler", "get-encrypted-file-by-id")),
 		getByIDService: getByIDService,
+		middleware:     middleware,
 	}
 }
 
@@ -40,7 +44,11 @@ func (h *GetEncryptedFileByIDHandler) Pattern() string {
 }
 
 // ServeHTTP handles HTTP requests
-func (h *GetEncryptedFileByIDHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *GetEncryptedFileByIDHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) { // Apply MaplesSend middleware before handling the request
+	h.middleware.Attach(h.Execute)(w, r)
+}
+
+func (h *GetEncryptedFileByIDHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Extract file ID from URL path

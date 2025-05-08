@@ -120,6 +120,9 @@ func (c *Client) RefreshTokens() (bool, error) {
 			resp.StatusCode, string(body))
 	}
 
+	// Log the raw response for debugging
+	logger.Debugw("Raw token refresh response:", "body", string(body))
+
 	// Parse the response
 	var response struct {
 		AccessToken            string    `json:"access_token"`
@@ -136,12 +139,29 @@ func (c *Client) RefreshTokens() (bool, error) {
 		)
 		return false, fmt.Errorf("failed to parse refresh token response: %w", err)
 	}
-	logger.Debugw("Token refresh response parsed successfully",
-		"access_token_present", response.AccessToken != "",
-		"refresh_token_present", response.RefreshToken != "",
-		"access_token_expiry", response.AccessTokenExpiryTime,
-		"refresh_token_expiry", response.RefreshTokenExpiryTime,
-	)
+
+	// Validate the response values
+	if response.AccessToken == "" {
+		logger.Error("Refresh response did not contain an access token")
+		return false, fmt.Errorf("server returned empty access token")
+	}
+
+	// Check if dates are valid
+	zeroTime := time.Time{}
+	if response.AccessTokenExpiryTime == zeroTime {
+		logger.Error("Refresh response contains invalid access token expiry time (zero value)")
+		return false, fmt.Errorf("server returned invalid access token expiry time")
+	}
+
+	if response.RefreshTokenExpiryTime == zeroTime {
+		logger.Error("Refresh response contains invalid refresh token expiry time (zero value)")
+		return false, fmt.Errorf("server returned invalid refresh token expiry time")
+	}
+
+	// Additional logging to verify the parsed times
+	logger.Infow("Parsed token expiry times from response",
+		"access_token_expiry", response.AccessTokenExpiryTime.Format(time.RFC3339),
+		"refresh_token_expiry", response.RefreshTokenExpiryTime.Format(time.RFC3339))
 
 	// Update tokens in preferences
 	err = preferences.SetLoginResponse(
@@ -155,6 +175,15 @@ func (c *Client) RefreshTokens() (bool, error) {
 		return false, fmt.Errorf("failed to save refreshed tokens: %w", err)
 	}
 
-	logger.Info("Tokens refreshed and saved successfully")
+	// Verify the saved values after updating preferences
+	if preferences.LoginResponse.AccessTokenExpiryTime == zeroTime ||
+		preferences.LoginResponse.RefreshTokenExpiryTime == zeroTime {
+		logger.Error("After saving preferences, token expiry times are invalid (zero value)")
+		return false, fmt.Errorf("failed to save token expiry times properly")
+	}
+
+	logger.Infow("Tokens refreshed and saved successfully",
+		"new_access_token_expiry", preferences.LoginResponse.AccessTokenExpiryTime.Format(time.RFC3339),
+		"new_refresh_token_expiry", preferences.LoginResponse.RefreshTokenExpiryTime.Format(time.RFC3339))
 	return true, nil
 }

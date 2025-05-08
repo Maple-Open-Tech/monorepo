@@ -10,6 +10,7 @@ import (
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/interface/http/middleware"
 	svc "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/vault/service/encryptedfile"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 )
@@ -19,6 +20,7 @@ type CreateEncryptedFileHandler struct {
 	config        *config.Configuration
 	logger        *zap.Logger
 	createService svc.CreateEncryptedFileService
+	middleware    middleware.Middleware
 }
 
 // NewCreateEncryptedFileHandler creates a new handler for file creation
@@ -26,11 +28,13 @@ func NewCreateEncryptedFileHandler(
 	config *config.Configuration,
 	logger *zap.Logger,
 	createService svc.CreateEncryptedFileService,
+	middleware middleware.Middleware,
 ) *CreateEncryptedFileHandler {
 	return &CreateEncryptedFileHandler{
 		config:        config,
 		logger:        logger.With(zap.String("handler", "create-encrypted-file")),
 		createService: createService,
+		middleware:    middleware,
 	}
 }
 
@@ -41,11 +45,17 @@ func (h *CreateEncryptedFileHandler) Pattern() string {
 
 // ServeHTTP handles HTTP requests
 func (h *CreateEncryptedFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Apply MaplesSend middleware before handling the request
+	h.middleware.Attach(h.Execute)(w, r)
+}
+
+func (h *CreateEncryptedFileHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Check authentication
 	userIDValue := ctx.Value(constants.SessionFederatedUserID)
 	if userIDValue == nil {
+		h.logger.Error("--> anonymous user detected")
 		httperror.ResponseError(w, httperror.NewForUnauthorizedWithSingleField("message", "Authentication required"))
 		return
 	}

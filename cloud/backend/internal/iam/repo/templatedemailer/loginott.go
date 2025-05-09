@@ -19,7 +19,7 @@ func (impl *templatedEmailer) SendUserLoginOneTimeTokenEmail(ctx context.Context
 }
 
 func (impl *templatedEmailer) SendPaperCloudPropertyEvaluatorModuleUserLoginOneTimeTokenEmail(ctx context.Context, email, oneTimeToken, firstName string) error {
-	fp := path.Join("templates", "ipe/login_ott.html")
+	fp := path.Join("templates", "papercloud/login_ott.html")
 	tmpl, err := template.ParseFiles(fp)
 	if err != nil {
 		return fmt.Errorf("user login one-time token parsing error: %w", err)

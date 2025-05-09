@@ -138,7 +138,7 @@ func (svc *gatewayFederatedUserRegisterServiceImpl) Execute(
 		e["module"] = "Module is required"
 	} else {
 		// Assuming MonolithModulePaperCloudPropertyEvaluator is the only valid module for now
-		if req.Module != int(constants.MonolithModulePaperCloudPropertyEvaluator) {
+		if req.Module != int(constants.MonolithModulePaperCloud) {
 			e["module"] = "Module is invalid"
 		}
 	}

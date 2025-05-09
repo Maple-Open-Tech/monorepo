@@ -19,7 +19,7 @@ func (impl *templatedEmailer) SendUserPasswordResetEmail(ctx context.Context, mo
 
 func (impl *templatedEmailer) SendPaperCloudPropertyEvaluatorUserPasswordResetEmail(ctx context.Context, email, verificationCode, firstName string) error {
 
-	fp := path.Join("templates", "iam/forgot_password.html")
+	fp := path.Join("templates", "papercloud/forgot_password.html")
 	tmpl, err := template.ParseFiles(fp)
 	if err != nil {
 		return err

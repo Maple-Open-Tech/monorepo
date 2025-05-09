@@ -7,11 +7,13 @@ import (
 	"log"
 	"path"
 	"text/template"
+
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
 )
 
 func (impl *templatedEmailer) SendUserVerificationEmail(ctx context.Context, monolithModule int, email, verificationCode, firstName string) error {
 	switch monolithModule {
-	case 1:
+	case int(constants.MonolithModulePaperCloud):
 		return impl.SendPaperCloudPropertyEvaluatorModuleUserVerificationEmail(ctx, email, verificationCode, firstName)
 	default:
 		return fmt.Errorf("unsupported monolith module: %d", monolithModule)
@@ -19,10 +21,10 @@ func (impl *templatedEmailer) SendUserVerificationEmail(ctx context.Context, mon
 }
 
 func (impl *templatedEmailer) SendPaperCloudPropertyEvaluatorModuleUserVerificationEmail(ctx context.Context, email, verificationCode, firstName string) error {
-	fp := path.Join("templates", "ipe/user_verification_email.html")
+	fp := path.Join("templates", "papercloud/user_verification_email.html")
 	tmpl, err := template.ParseFiles(fp)
 	if err != nil {
-		return fmt.Errorf("user verification parsing error: %w", err)
+		return fmt.Errorf("sending papercloud user verification parsing error: %w", err)
 	}
 
 	var processed bytes.Buffer
@@ -38,13 +40,13 @@ func (impl *templatedEmailer) SendPaperCloudPropertyEvaluatorModuleUserVerificat
 		FirstName:        firstName,
 	}
 	if err := tmpl.Execute(&processed, data); err != nil {
-		return fmt.Errorf("user verification template execution error: %w", err)
+		return fmt.Errorf("sending papercloud user verification template execution error: %w", err)
 	}
 	body := processed.String() // DEVELOPERS NOTE: Convert our long sequence of data into a string.
 
-	if err := impl.incomePropertyEmailer.Send(ctx, impl.incomePropertyEmailer.GetSenderEmail(), "Activate your PaperCloud Property Evaluator Account", email, body); err != nil {
-		return fmt.Errorf("sending income property evaluator user verification error: %w", err)
+	if err := impl.incomePropertyEmailer.Send(ctx, impl.incomePropertyEmailer.GetSenderEmail(), "Activate your PaperCloud Account", email, body); err != nil {
+		return fmt.Errorf("sending papercloud user verification error: %w", err)
 	}
-	log.Println("success in sending income property evaluator user verification email")
+	log.Println("success in sending papercloud user verification email")
 	return nil
 }

@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"time"
@@ -12,10 +13,12 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
 	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/domain/federateduser"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/domain/keys"
 	uc_emailer "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/usecase/emailer"
 	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/usecase/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/random"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/crypto"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/jwt"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/password"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/storage/database/mongodbcache"
@@ -195,23 +198,104 @@ func (svc *gatewayFederatedUserRegisterServiceImpl) Execute(
 }
 
 func (s *gatewayFederatedUserRegisterServiceImpl) createCustomerFederatedUserForRequest(sessCtx context.Context, req *RegisterCustomerRequestIDO) (*dom_user.FederatedUser, error) {
-
+	// Get the IP address from the session context
 	ipAddress, _ := sessCtx.Value(constants.SessionIPAddress).(string)
 
+	// Generate email verification code
 	emailVerificationCode, err := random.GenerateSixDigitCode()
 	if err != nil {
 		return nil, err
 	}
 
+	// Decode base64 encoded crypto values
+	saltBytes, err := base64.StdEncoding.DecodeString(req.Salt)
+	if err != nil {
+		s.logger.Error("failed decoding salt", zap.Error(err))
+		return nil, fmt.Errorf("invalid salt format: %w", err)
+	}
+
+	publicKeyBytes, err := base64.StdEncoding.DecodeString(req.PublicKey)
+	if err != nil {
+		s.logger.Error("failed decoding public key", zap.Error(err))
+		return nil, fmt.Errorf("invalid public key format: %w", err)
+	}
+
+	// Process EncryptedMasterKey - expect base64 encoded data with nonce and ciphertext
+	encMasterKeyBytes, err := base64.StdEncoding.DecodeString(req.EncryptedMasterKey)
+	if err != nil {
+		s.logger.Error("failed decoding encrypted master key", zap.Error(err))
+		return nil, fmt.Errorf("invalid encrypted master key format: %w", err)
+	}
+
+	// Split into nonce and ciphertext based on crypto.NonceSize
+	if len(encMasterKeyBytes) < crypto.NonceSize {
+		return nil, fmt.Errorf("encrypted master key data too short")
+	}
+	encryptedMasterKey := keys.EncryptedMasterKey{
+		Nonce:      encMasterKeyBytes[:crypto.NonceSize],
+		Ciphertext: encMasterKeyBytes[crypto.NonceSize:],
+	}
+
+	// Process EncryptedPrivateKey
+	encPrivateKeyBytes, err := base64.StdEncoding.DecodeString(req.EncryptedPrivateKey)
+	if err != nil {
+		s.logger.Error("failed decoding encrypted private key", zap.Error(err))
+		return nil, fmt.Errorf("invalid encrypted private key format: %w", err)
+	}
+
+	if len(encPrivateKeyBytes) < crypto.NonceSize {
+		return nil, fmt.Errorf("encrypted private key data too short")
+	}
+	encryptedPrivateKey := keys.EncryptedPrivateKey{
+		Nonce:      encPrivateKeyBytes[:crypto.NonceSize],
+		Ciphertext: encPrivateKeyBytes[crypto.NonceSize:],
+	}
+
+	// Process EncryptedRecoveryKey
+	encRecoveryKeyBytes, err := base64.StdEncoding.DecodeString(req.EncryptedRecoveryKey)
+	if err != nil {
+		s.logger.Error("failed decoding encrypted recovery key", zap.Error(err))
+		return nil, fmt.Errorf("invalid encrypted recovery key format: %w", err)
+	}
+
+	if len(encRecoveryKeyBytes) < crypto.NonceSize {
+		return nil, fmt.Errorf("encrypted recovery key data too short")
+	}
+	encryptedRecoveryKey := keys.EncryptedRecoveryKey{
+		Nonce:      encRecoveryKeyBytes[:crypto.NonceSize],
+		Ciphertext: encRecoveryKeyBytes[crypto.NonceSize:],
+	}
+
+	// Process MasterKeyEncryptedWithRecoveryKey
+	encMasterWithRecoveryBytes, err := base64.StdEncoding.DecodeString(req.MasterKeyEncryptedWithRecoveryKey)
+	if err != nil {
+		s.logger.Error("failed decoding master key encrypted with recovery key", zap.Error(err))
+		return nil, fmt.Errorf("invalid master key encrypted with recovery key format: %w", err)
+	}
+
+	if len(encMasterWithRecoveryBytes) < crypto.NonceSize {
+		return nil, fmt.Errorf("master key encrypted with recovery key data too short")
+	}
+	masterKeyEncryptedWithRecoveryKey := keys.MasterKeyEncryptedWithRecoveryKey{
+		Nonce:      encMasterWithRecoveryBytes[:crypto.NonceSize],
+		Ciphertext: encMasterWithRecoveryBytes[crypto.NonceSize:],
+	}
+
+	// Create the PublicKey object
+	publicKey := keys.PublicKey{
+		Key:            publicKeyBytes,
+		VerificationID: req.VerificationID,
+	}
+
 	userID := primitive.NewObjectID()
 	u := &dom_user.FederatedUser{
 		// --- E2EE ---
-		Salt:                              req.Salt,
-		PublicKey:                         req.PublicKey,
-		EncryptedMasterKey:                req.EncryptedMasterKey,
-		EncryptedPrivateKey:               req.EncryptedPrivateKey,
-		EncryptedRecoveryKey:              req.EncryptedRecoveryKey,
-		MasterKeyEncryptedWithRecoveryKey: req.MasterKeyEncryptedWithRecoveryKey,
+		PasswordSalt:                      saltBytes,
+		PublicKey:                         publicKey,
+		EncryptedMasterKey:                encryptedMasterKey,
+		EncryptedPrivateKey:               encryptedPrivateKey,
+		EncryptedRecoveryKey:              encryptedRecoveryKey,
+		MasterKeyEncryptedWithRecoveryKey: masterKeyEncryptedWithRecoveryKey,
 		VerificationID:                    req.VerificationID,
 
 		// --- The rest of the stuff... ---

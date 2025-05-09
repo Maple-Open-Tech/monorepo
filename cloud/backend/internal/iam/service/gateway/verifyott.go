@@ -18,6 +18,7 @@ import (
 	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/domain/federateduser"
 	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/usecase/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/crypto"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/jwt"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/storage/database/mongodbcache"
 )
@@ -202,32 +203,46 @@ func (s *gatewayVerifyLoginOTTServiceImpl) Execute(sessCtx context.Context, req 
 		return nil, fmt.Errorf("failed to process login: %w", err)
 	}
 
+	// Convert structured keys to string representations for the response
+	saltBase64 := base64.StdEncoding.EncodeToString(user.PasswordSalt)
+	publicKeyBase64 := base64.StdEncoding.EncodeToString(user.PublicKey.Key)
+
+	// Combine nonce and ciphertext for encryptedMasterKey
+	encryptedMasterKeyBytes := make([]byte, len(user.EncryptedMasterKey.Nonce)+len(user.EncryptedMasterKey.Ciphertext))
+	copy(encryptedMasterKeyBytes, user.EncryptedMasterKey.Nonce)
+	copy(encryptedMasterKeyBytes[len(user.EncryptedMasterKey.Nonce):], user.EncryptedMasterKey.Ciphertext)
+	encryptedMasterKeyBase64 := base64.StdEncoding.EncodeToString(encryptedMasterKeyBytes)
+
+	// Combine nonce and ciphertext for encryptedPrivateKey
+	encryptedPrivateKeyBytes := make([]byte, len(user.EncryptedPrivateKey.Nonce)+len(user.EncryptedPrivateKey.Ciphertext))
+	copy(encryptedPrivateKeyBytes, user.EncryptedPrivateKey.Nonce)
+	copy(encryptedPrivateKeyBytes[len(user.EncryptedPrivateKey.Nonce):], user.EncryptedPrivateKey.Ciphertext)
+	encryptedPrivateKeyBase64 := base64.StdEncoding.EncodeToString(encryptedPrivateKeyBytes)
+
 	// Return encrypted keys and challenge for client-side password verification
 	return &GatewayVerifyLoginOTTResponseIDO{
-		Salt:                user.Salt,
-		PublicKey:           user.PublicKey,
-		EncryptedMasterKey:  user.EncryptedMasterKey,
-		EncryptedPrivateKey: user.EncryptedPrivateKey,
+		Salt:                saltBase64,
+		PublicKey:           publicKeyBase64,
+		EncryptedMasterKey:  encryptedMasterKeyBase64,
+		EncryptedPrivateKey: encryptedPrivateKeyBase64,
 		EncryptedChallenge:  encryptedChallenge,
 		ChallengeID:         challengeID,
 	}, nil
 }
 
-// getEncryptedChallenge encrypts the challenge with the user's master key
+// getEncryptedChallenge encrypts the challenge with the user's public key
 func getEncryptedChallenge(challenge []byte, user *domain.FederatedUser) (string, error) {
-	// Decode the user's public key from base64
-	publicKeyBytes, err := base64.StdEncoding.DecodeString(user.PublicKey)
-	if err != nil {
-		return "", fmt.Errorf("failed to decode user public key: %w", err)
-	}
+	// The user.PublicKey.Key is already in binary format, no need to decode
+	publicKeyBytes := user.PublicKey.Key
 
 	// Ensure we have the right length for NaCl box
-	if len(publicKeyBytes) != 32 {
-		return "", fmt.Errorf("invalid public key length: got %d, want 32", len(publicKeyBytes))
+	if len(publicKeyBytes) != crypto.PublicKeySize {
+		return "", fmt.Errorf("invalid public key length: got %d, want %d",
+			len(publicKeyBytes), crypto.PublicKeySize)
 	}
 
 	// Generate a random nonce
-	var nonce [24]byte
+	var nonce [crypto.NonceSize]byte
 	if _, err := rand.Read(nonce[:]); err != nil {
 		return "", fmt.Errorf("failed to generate nonce: %w", err)
 	}
@@ -239,16 +254,16 @@ func getEncryptedChallenge(challenge []byte, user *domain.FederatedUser) (string
 	}
 
 	// Convert the user's public key to the expected format
-	var userPubKey [32]byte
+	var userPubKey [crypto.PublicKeySize]byte
 	copy(userPubKey[:], publicKeyBytes)
 
 	// Encrypt the challenge with box.Seal using the user's public key
 	encrypted := box.Seal(nonce[:], challenge, &nonce, &userPubKey, ephemeralPriv)
 
 	// Prepend the ephemeral public key to the encrypted data
-	result := make([]byte, len(encrypted)+32)
-	copy(result[:32], ephemeralPub[:])
-	copy(result[32:], encrypted)
+	result := make([]byte, len(encrypted)+crypto.PublicKeySize)
+	copy(result[:crypto.PublicKeySize], ephemeralPub[:])
+	copy(result[crypto.PublicKeySize:], encrypted)
 
 	// Return base64 encoded result
 	return base64.StdEncoding.EncodeToString(result), nil

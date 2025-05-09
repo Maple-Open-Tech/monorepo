@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/domain/keys"
 )
 
 const (
@@ -53,13 +55,13 @@ type FederatedUser struct {
 	AgreeToTrackingAcrossThirdPartyAppsAndServices bool               `bson:"agree_to_tracking_across_third_party_apps_and_services" json:"agree_to_tracking_across_third_party_apps_and_services,omitempty"`
 
 	// --- E2EE Related ---
-	Salt                              string `json:"salt"`
-	PublicKey                         string `json:"publicKey"`
-	EncryptedMasterKey                string `json:"encryptedMasterKey"`
-	EncryptedPrivateKey               string `json:"encryptedPrivateKey"`
-	EncryptedRecoveryKey              string `json:"encryptedRecoveryKey"`
-	MasterKeyEncryptedWithRecoveryKey string `json:"masterKeyEncryptedWithRecoveryKey"`
-	VerificationID                    string `json:"verificationID"`
+	PasswordSalt                      []byte                                 `json:"password_salt" bson:"password_salt"`
+	EncryptedMasterKey                keys.EncryptedMasterKey                `json:"encrypted_master_key" bson:"encrypted_master_key"`
+	PublicKey                         keys.PublicKey                         `json:"public_key" bson:"public_key"`
+	EncryptedPrivateKey               keys.EncryptedPrivateKey               `json:"encrypted_private_key" bson:"encrypted_private_key"`
+	EncryptedRecoveryKey              keys.EncryptedRecoveryKey              `json:"encrypted_recovery_key" bson:"encrypted_recovery_key"`
+	MasterKeyEncryptedWithRecoveryKey keys.MasterKeyEncryptedWithRecoveryKey `json:"master_key_encrypted_with_recovery_key" bson:"master_key_encrypted_with_recovery_key"`
+	VerificationID                    string                                 `json:"verificationID"`
 
 	// --- Metadata ---
 	CreatedFromIPAddress  string             `bson:"created_from_ip_address" json:"created_from_ip_address"`
@@ -70,6 +72,7 @@ type FederatedUser struct {
 	ModifiedByUserID      primitive.ObjectID `bson:"modified_by_user_id" json:"modified_by_user_id"`
 	ModifiedAt            time.Time          `bson:"modified_at" json:"modified_at"`
 	ModifiedByName        string             `bson:"modified_by_name" json:"modified_by_name"`
+	LastLoginAt           time.Time          `json:"last_login_at" bson:"last_login_at"`
 
 	// OTPEnabled controls whether we force 2FA or not during login.
 	OTPEnabled bool `bson:"otp_enabled" json:"otp_enabled"`

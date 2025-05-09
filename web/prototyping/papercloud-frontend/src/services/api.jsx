@@ -78,16 +78,53 @@ export const authAPI = {
   },
 };
 
+const paperCloudApi = axios.create({
+  baseURL: "/papercloud/api/v1", // Relative URL that will be proxied by Vite
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+// Add a request interceptor to include auth token
+paperCloudApi.interceptors.request.use(
+  (config) => {
+    const token = tokenManager.getAccessToken();
+    if (token) {
+      config.headers["Authorization"] = `JWT ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  },
+);
+
+// Add a response interceptor to handle 401 errors
+paperCloudApi.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  async (error) => {
+    // If the server returned a 401 error, redirect to login
+    if (error.response && error.response.status === 401) {
+      console.error("Unauthorized API call - redirecting to login", error);
+      tokenManager.clearTokens();
+      tokenManager.redirectToLogin();
+    }
+    return Promise.reject(error);
+  },
+);
+
 // User profile API endpoints
 export const userAPI = {
   // Get the current user's profile
   getProfile: () => {
-    return api.get("/me");
+    return paperCloudApi.get("/me");
   },
 
   // Update the current user's profile
   updateProfile: (profileData) => {
-    return api.put("/me", profileData);
+    return paperCloudApi.put("/me", profileData);
   },
 };
 

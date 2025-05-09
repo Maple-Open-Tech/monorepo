@@ -14,7 +14,7 @@ import (
 	dom_collection "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/papercloud/domain/collection"
 )
 
-type collectionStorerImpl struct {
+type collectionRepositoryImpl struct {
 	Logger     *zap.Logger
 	DbClient   *mongo.Client
 	Collection *mongo.Collection
@@ -40,11 +40,15 @@ func NewRepository(appCfg *config.Configuration, loggerp *zap.Logger, client *mo
 			{Key: "id", Value: 1},
 		}, Options: options.Index().SetUnique(true)},
 		{Keys: bson.D{
-			{Key: "shared_with.user_id", Value: 1},
-		}},
-		{Keys: bson.D{
 			{Key: "owner_id", Value: 1},
 			{Key: "created_at", Value: -1},
+		}},
+		{Keys: bson.D{
+			{Key: "members.recipient_id", Value: 1},
+		}},
+		{Keys: bson.D{
+			{Key: "members.collection_id", Value: 1},
+			{Key: "members.recipient_id", Value: 1},
 		}},
 	})
 
@@ -53,7 +57,7 @@ func NewRepository(appCfg *config.Configuration, loggerp *zap.Logger, client *mo
 		return nil
 	}
 
-	return &collectionStorerImpl{
+	return &collectionRepositoryImpl{
 		Logger:     loggerp,
 		DbClient:   client,
 		Collection: cc,

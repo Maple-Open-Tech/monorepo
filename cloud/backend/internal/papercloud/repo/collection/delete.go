@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-func (impl collectionStorerImpl) Delete(id string) error {
+func (impl collectionRepositoryImpl) Delete(id string) error {
 	ctx := context.Background()
 	filter := bson.M{"id": id}
 

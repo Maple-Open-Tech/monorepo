@@ -10,6 +10,11 @@ import (
 const (
 	CollectionTypeFolder = "folder"
 	CollectionTypeAlbum  = "album"
+
+	// Permission levels
+	CollectionPermissionReadOnly  = "read_only"
+	CollectionPermissionReadWrite = "read_write"
+	CollectionPermissionAdmin     = "admin"
 )
 
 // Collection represents a folder or album
@@ -23,17 +28,22 @@ type Collection struct {
 	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
 
 	// Collection key encrypted with owner's master key
-	EncryptedKey keys.EncryptedCollectionKey `bson:"encrypted_key" json:"encrypted_key"`
+	EncryptedCollectionKey keys.EncryptedCollectionKey `bson:"encrypted_collection_key" json:"encrypted_collection_key"`
 
-	// Collection shares (users with access)
-	SharedWith []Share `bson:"shared_with" json:"shared_with"`
+	// Collection members (users with access)
+	Members []CollectionMembership `bson:"members" json:"members"`
 }
 
-// Share represents a shared collection
-type Share struct {
-	UserID          string    `bson:"user_id" json:"user_id"`
-	PublicKey       []byte    `bson:"public_key" json:"public_key"`
-	EncryptedKey    []byte    `bson:"encrypted_key" json:"encrypted_key"` // Collection key encrypted with recipient's public key
+// CollectionMembership represents a user's access to a collection
+type CollectionMembership struct {
+	CollectionID   string `bson:"collection_id" json:"collection_id"`     // ID of the collection (redundant but helpful for queries)
+	RecipientID    string `bson:"recipient_id" json:"recipient_id"`       // User receiving access
+	RecipientEmail string `bson:"recipient_email" json:"recipient_email"` // Email for display purposes
+	GrantedByID    string `bson:"granted_by_id" json:"granted_by_id"`     // User who shared the collection
+
+	// Collection key encrypted with recipient's public key using box_seal. This matches the box_seal format which doesn't need a separate nonce.
+	EncryptedCollectionKey []byte `bson:"encrypted_collection_key" json:"encrypted_collection_key"`
+
 	PermissionLevel string    `bson:"permission_level" json:"permission_level"`
 	CreatedAt       time.Time `bson:"created_at" json:"created_at"`
 }

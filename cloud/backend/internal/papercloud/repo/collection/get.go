@@ -12,7 +12,7 @@ import (
 	dom_collection "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/papercloud/domain/collection"
 )
 
-func (impl collectionStorerImpl) Get(id string) (*dom_collection.Collection, error) {
+func (impl collectionRepositoryImpl) Get(id string) (*dom_collection.Collection, error) {
 	ctx := context.Background()
 	filter := bson.M{"id": id}
 
@@ -29,7 +29,7 @@ func (impl collectionStorerImpl) Get(id string) (*dom_collection.Collection, err
 	return &result, nil
 }
 
-func (impl collectionStorerImpl) GetAllByUserID(userID string) ([]*dom_collection.Collection, error) {
+func (impl collectionRepositoryImpl) GetAllByUserID(userID string) ([]*dom_collection.Collection, error) {
 	ctx := context.Background()
 	// Find collections owned by this user
 	filter := bson.M{"owner_id": userID}
@@ -50,10 +50,14 @@ func (impl collectionStorerImpl) GetAllByUserID(userID string) ([]*dom_collectio
 	return collections, nil
 }
 
-func (impl collectionStorerImpl) GetSharedCollections(userID string) ([]*dom_collection.Collection, error) {
+func (impl collectionRepositoryImpl) GetCollectionsSharedWithUser(userID string) ([]*dom_collection.Collection, error) {
 	ctx := context.Background()
-	// Find collections where user is in shared_with array
-	filter := bson.M{"shared_with.user_id": userID}
+	// Find collections where user is in members array as recipient
+	filter := bson.M{
+		"members.recipient_id": userID,
+		// Exclude collections owned by the user to avoid duplicates
+		"owner_id": bson.M{"$ne": userID},
+	}
 
 	cursor, err := impl.Collection.Find(ctx, filter)
 	if err != nil {

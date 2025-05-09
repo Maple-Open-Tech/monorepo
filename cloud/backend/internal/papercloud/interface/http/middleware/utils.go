@@ -23,6 +23,8 @@ func init() {
 		"/papercloud/api/v1/me":        true,
 		"/papercloud/api/v1/me/delete": true,
 		"/papercloud/api/v1/dashboard": true,
+		//TODO: Collections
+		//TODO: Files
 	}
 
 	// Pattern matches
@@ -31,6 +33,8 @@ func init() {
 		// "^/papercloud/api/v1/wallet/[0-9a-f]+$",                 // Regex designed for mongodb ids.
 		// "^/papercloud/api/v1/public-wallets/0x[0-9a-fA-F]{40}$", // Regex designed for ethereum addresses.
 		// "^/papercloud/api/v1/users/[0-9a-f]+$",                  // Regex designed for mongodb ids.
+		//TODO: Collections
+		//TODO: Files
 	}
 
 	// Precompile patterns

@@ -1,19 +1,21 @@
 // monorepo/web/prototyping/papercloud-cli/src/pages/CompleteLogin.jsx
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
-import _sodium from "libsodium-wrappers"; // Import with underscore
+import _sodium from "libsodium-wrappers";
 import { authAPI } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 
 function CompleteLogin() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { login } = useAuth();
 
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [initializing, setInitializing] = useState(true);
-  const [debug, setDebug] = useState({});
   const [sodium, setSodium] = useState(null);
+  const [debug, setDebug] = useState({});
 
   // Get auth data from location state
   const email = location.state?.email;
@@ -34,13 +36,12 @@ function CompleteLogin() {
       try {
         await _sodium.ready;
         console.log("Sodium initialized successfully");
-
-        // Store sodium instance in state
         setSodium(_sodium);
         setInitializing(false);
 
-        // Log authData to console for debugging
-        console.log("Auth data in initialization:", authData);
+        // Log authData for debugging
+        console.log("Auth data received:", authData);
+        setDebug(authData);
       } catch (err) {
         console.error("Error initializing sodium:", err);
         setError("Failed to initialize encryption library");
@@ -60,7 +61,7 @@ function CompleteLogin() {
     try {
       return sodium.from_base64(base64String);
     } catch (err) {
-      console.warn("Standard base64 decoding failed, trying with padding", err);
+      console.warn("Standard base64 decoding failed, trying with padding");
 
       // Add padding if needed
       let paddedString = base64String;
@@ -71,7 +72,7 @@ function CompleteLogin() {
       try {
         return sodium.from_base64(paddedString);
       } catch (err2) {
-        console.error("Padded base64 decoding failed", err2);
+        console.error("Padded base64 decoding failed");
 
         // Last resort: try using standard browser atob
         try {
@@ -84,11 +85,77 @@ function CompleteLogin() {
           }
           return bytes;
         } catch (err3) {
-          console.error("All base64 decoding methods failed", err3);
+          console.error("All base64 decoding methods failed");
           throw new Error(`Failed to decode base64 string: ${err3.message}`);
         }
       }
     }
+  };
+
+  // Helper to try logging in with different base64 formats
+  const tryLoginWithFormat = async (email, challengeId, decryptedChallenge) => {
+    // Create multiple base64 formats to try
+    const formats = [
+      // Standard browser btoa (this was working in your tests)
+      btoa(String.fromCharCode.apply(null, decryptedChallenge)),
+
+      // Standard libsodium base64
+      sodium.to_base64(decryptedChallenge),
+
+      // URL-safe base64
+      sodium
+        .to_base64(decryptedChallenge)
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_"),
+
+      // Without padding
+      sodium.to_base64(decryptedChallenge).replace(/=+$/, ""),
+    ];
+
+    // Try formats one by one until one works
+    let lastError = null;
+
+    for (let i = 0; i < formats.length; i++) {
+      try {
+        console.log(`Trying format ${i + 1} of ${formats.length}...`);
+
+        const response = await authAPI.completeLogin(
+          email,
+          challengeId,
+          formats[i],
+        );
+
+        console.log(`Login successful with format ${i + 1}`);
+
+        // Check if the response data is valid
+        console.log("Response data:", response.data);
+
+        if (!response.data || !response.data.access_token) {
+          console.error("Invalid response data:", response.data);
+          throw new Error("Server returned invalid data");
+        }
+
+        return response; // Return on first success
+      } catch (err) {
+        console.warn(
+          `Format ${i + 1} failed:`,
+          err.response?.data || err.message,
+        );
+        lastError = err;
+
+        // If the error indicates the challenge was already used, don't try more formats
+        if (
+          err.response?.data?.challengeId === "Challenge has already been used"
+        ) {
+          throw new Error(
+            "This login attempt has already been completed. Please start over with a new login.",
+          );
+        }
+      }
+    }
+
+    // If we get here, none of the formats worked
+    throw lastError || new Error("All login formats failed");
   };
 
   const handleSubmit = async (e) => {
@@ -101,17 +168,8 @@ function CompleteLogin() {
         throw new Error("Encryption library not initialized");
       }
 
-      // Log the authData for debugging
-      console.log("Auth data received:", authData);
-      setDebug(authData);
-
-      // If challengeId looks like a base64 string, decode it
-      const challengeId = authData.challengeId;
-      console.log("Challenge ID:", challengeId);
-
-      if (!challengeId) {
-        throw new Error("Challenge ID is missing");
-      }
+      // Log the challenge ID for debugging
+      console.log("Challenge ID:", authData.challengeId);
 
       // Decode base64 strings from authData with enhanced error handling
       const salt = safeFromBase64(authData.salt);
@@ -119,16 +177,13 @@ function CompleteLogin() {
         authData.encryptedMasterKey,
       );
       const encryptedChallenge = safeFromBase64(authData.encryptedChallenge);
+      const challengeId = authData.challengeId;
 
-      console.log("Decoded salt length:", salt.length);
-      console.log(
-        "Decoded encryptedMasterKeyBytes length:",
-        encryptedMasterKeyBytes.length,
-      );
-      console.log(
-        "Decoded encryptedChallenge length:",
-        encryptedChallenge.length,
-      );
+      console.log("Decoded data lengths:", {
+        salt: salt.length,
+        encryptedMasterKey: encryptedMasterKeyBytes.length,
+        encryptedChallenge: encryptedChallenge.length,
+      });
 
       // Split nonce and ciphertext for encrypted master key
       const encryptedMasterKeyNonce = encryptedMasterKeyBytes.slice(
@@ -158,8 +213,10 @@ function CompleteLogin() {
         );
         console.log("Master key decrypted successfully");
       } catch (decryptErr) {
-        console.error("Failed to decrypt master key:", decryptErr);
-        throw new Error("Invalid password. Failed to decrypt master key.");
+        console.error("Failed to decrypt master key");
+        throw new Error(
+          "Invalid password. Please check your password and try again.",
+        );
       }
 
       // Get the private key to decrypt the challenge
@@ -184,13 +241,17 @@ function CompleteLogin() {
         );
         console.log("Private key decrypted successfully");
       } catch (decryptErr) {
-        console.error("Failed to decrypt private key:", decryptErr);
+        console.error("Failed to decrypt private key");
         throw new Error("Failed to decrypt private key with master key.");
       }
 
-      // Analyze and decrypt the challenge
-      if (encryptedChallenge.length < sodium.crypto_box_PUBLICKEYBYTES) {
-        throw new Error("Encrypted challenge is too short");
+      // Check if the challenge is in the correct format
+      if (
+        encryptedChallenge.length <
+        sodium.crypto_box_PUBLICKEYBYTES + sodium.crypto_box_NONCEBYTES
+      ) {
+        console.error("Encrypted challenge is too short");
+        throw new Error("Invalid challenge format. Challenge is too short.");
       }
 
       // For box_seal encryption, the first 32 bytes are the ephemeral public key
@@ -202,135 +263,78 @@ function CompleteLogin() {
         sodium.crypto_box_PUBLICKEYBYTES,
       );
 
-      if (nonceCiphertext.length < sodium.crypto_box_NONCEBYTES) {
-        throw new Error("Nonce+ciphertext portion is too short");
-      }
-
       // Extract nonce from the beginning of the remaining data
       const nonce = nonceCiphertext.slice(0, sodium.crypto_box_NONCEBYTES);
       const ciphertext = nonceCiphertext.slice(sodium.crypto_box_NONCEBYTES);
 
-      console.log("Challenge components extracted:", {
-        ephemeralPublicKeyLength: ephemeralPublicKey.length,
-        nonceLength: nonce.length,
-        ciphertextLength: ciphertext.length,
-      });
-
-      // Convert to proper format for decryption
-      const ephemeralPublicKeyArray = new Uint8Array(
-        sodium.crypto_box_PUBLICKEYBYTES,
-      );
-      ephemeralPublicKeyArray.set(ephemeralPublicKey);
-
-      const privateKeyArray = new Uint8Array(sodium.crypto_box_SECRETKEYBYTES);
-      privateKeyArray.set(privateKey);
-
-      const nonceArray = new Uint8Array(sodium.crypto_box_NONCEBYTES);
-      nonceArray.set(nonce);
+      console.log("Challenge components extracted successfully");
 
       // Decrypt the challenge
       let decryptedChallenge;
       try {
         decryptedChallenge = sodium.crypto_box_open_easy(
           ciphertext,
-          nonceArray,
-          ephemeralPublicKeyArray,
-          privateKeyArray,
+          nonce,
+          ephemeralPublicKey,
+          privateKey,
         );
         console.log("Challenge decrypted successfully");
       } catch (decryptErr) {
-        console.error("Failed to decrypt challenge:", decryptErr);
+        console.error("Failed to decrypt challenge");
         throw new Error("Failed to decrypt challenge.");
       }
 
-      // Convert decrypted challenge to different base64 formats for testing
-      const decryptedChallengeBase64 = sodium.to_base64(decryptedChallenge);
-      const decryptedChallengeBase64Standard = btoa(
-        String.fromCharCode.apply(null, decryptedChallenge),
-      );
-
-      console.log("Sending decrypted challenge to server:", {
+      // Try logging in with different formats
+      console.log("Attempting login with decrypted challenge...");
+      const response = await tryLoginWithFormat(
         email,
         challengeId,
-        decryptedDataLength: decryptedChallengeBase64.length,
-        decryptedDataPreview: decryptedChallengeBase64.substring(0, 20) + "...",
-      });
+        decryptedChallenge,
+      );
 
-      // Try to interpret the decrypted challenge as text in case it's useful for debugging
-      try {
-        const textDecoded = sodium.to_string(decryptedChallenge);
-        console.log("Challenge as text (if applicable):", textDecoded);
-      } catch (e) {
-        console.log("Challenge is not valid text");
+      // If we get here, login was successful
+      console.log("Login successful!");
+
+      // Make sure the response has the expected data
+      if (!response.data || !response.data.access_token) {
+        throw new Error("Server returned invalid response data");
       }
 
-      // Complete login by sending the decrypted challenge back to the server
-      // Try both base64 formats
-      let response;
       try {
-        // Try first with sodium's base64
-        response = await authAPI.completeLogin(
-          email,
-          challengeId,
-          decryptedChallengeBase64,
+        // Use the auth context to log in
+        login(
+          response.data.access_token,
+          response.data.access_token_expiry_date,
+          response.data.refresh_token,
+          response.data.refresh_token_expiry_date,
         );
-        console.log("Login successful with sodium base64");
-      } catch (err) {
-        console.error("First login attempt failed:", err);
 
-        // If first attempt fails, try with standard base64
-        try {
-          response = await authAPI.completeLogin(
-            email,
-            challengeId,
-            decryptedChallengeBase64Standard,
-          );
-          console.log("Login successful with standard base64");
-        } catch (err2) {
-          console.error("Second login attempt failed:", err2);
-
-          // Try a third time with browser's btoa directly
-          const directBase64 = btoa(
-            Array.from(decryptedChallenge)
-              .map((b) => String.fromCharCode(b))
-              .join(""),
-          );
-          try {
-            response = await authAPI.completeLogin(
-              email,
-              challengeId,
-              directBase64,
-            );
-            console.log("Login successful with direct btoa");
-          } catch (err3) {
-            console.error("All login attempts failed:", err3);
-            throw new Error(
-              err3.response?.data?.message ||
-                "Challenge verification failed. The authentication session may have expired.",
-            );
-          }
+        // Redirect to home page only after successful login
+        console.log("Navigating to home page...");
+        setTimeout(() => {
+          navigate("/");
+        }, 500); // Small delay to ensure state updates
+      } catch (loginErr) {
+        console.error("Error in login process:", loginErr);
+        // Still continue if login function had an error but we have tokens
+        if (response.data.access_token) {
+          navigate("/");
+        } else {
+          throw loginErr;
         }
       }
-
-      // Store the authentication tokens in localStorage
-      localStorage.setItem("accessToken", response.data.access_token);
-      localStorage.setItem("refreshToken", response.data.refresh_token);
-
-      // Redirect to home page or dashboard
-      navigate("/");
     } catch (err) {
       console.error("Login error:", err);
       setError(
         err.message ||
           err.response?.data?.message ||
-          "Authentication failed. Please try logging in again from the beginning.",
+          "Invalid password or authentication failed",
       );
     } finally {
       setLoading(false);
     }
   };
 
-  // Restart login if challenge has likely expired
   const handleRestartLogin = () => {
     navigate("/login");
   };
@@ -363,11 +367,9 @@ function CompleteLogin() {
           }}
         >
           <p>{error}</p>
-          {error.includes("expired") && (
-            <button onClick={handleRestartLogin} style={{ marginTop: "10px" }}>
-              Restart Login Process
-            </button>
-          )}
+          <button onClick={handleRestartLogin} style={{ marginTop: "10px" }}>
+            Restart Login Process
+          </button>
         </div>
       )}
 

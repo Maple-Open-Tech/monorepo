@@ -44,6 +44,7 @@ func (mid *middleware) Attach(fn http.HandlerFunc) http.HandlerFunc {
 			// Apply auth middleware for protected paths
 			handler = mid.PostJWTProcessorMiddleware(handler)
 			handler = mid.JWTProcessorMiddleware(handler)
+			handler = mid.CORSMiddleware(fn)
 			// handler = mid.EnforceBlacklistMiddleware(handler)
 		}
 

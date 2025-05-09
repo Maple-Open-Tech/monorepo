@@ -12,6 +12,7 @@ import RequestOTT from "./pages/RequestOTT";
 import VerifyOTT from "./pages/VerifyOTT";
 import CompleteLogin from "./pages/CompleteLogin";
 import Home from "./pages/Home";
+import Profile from "./pages/Profile"; // Import the new Profile component
 
 // Protected route component
 function ProtectedRoute({ children }) {
@@ -48,9 +49,15 @@ function Navigation() {
             </li>
           </>
         ) : (
-          <li>
-            <button onClick={logout}>Logout</button>
-          </li>
+          <>
+            <li>
+              <Link to="/profile">Profile</Link>{" "}
+              {/* New link to profile page */}
+            </li>
+            <li>
+              <button onClick={logout}>Logout</button>
+            </li>
+          </>
         )}
       </ul>
     </nav>
@@ -75,6 +82,14 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <Home />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
             </ProtectedRoute>
           }
         />

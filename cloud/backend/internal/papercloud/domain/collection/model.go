@@ -1,6 +1,12 @@
+// monorepo/cloud/backend/internal/papercloud/domain/collection/model.go
 package collection
 
 import "time"
+
+const (
+	CollectionTypeFolder = "folder"
+	CollectionTypeAlbum  = "album"
+)
 
 // Collection represents a folder or album
 type Collection struct {

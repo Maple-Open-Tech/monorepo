@@ -35,6 +35,8 @@ type EncryptedFile struct {
 	// Version identifier for the encryption scheme used
 	EncryptionVersion string `bson:"encryption_version" json:"encryption_version"`
 
+	EncryptedChecksum string
+
 	// Hash of the encrypted file for integrity checking
 	EncryptedHash string `bson:"encrypted_hash" json:"encrypted_hash"`
 

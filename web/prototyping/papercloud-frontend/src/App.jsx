@@ -12,7 +12,9 @@ import RequestOTT from "./pages/RequestOTT";
 import VerifyOTT from "./pages/VerifyOTT";
 import CompleteLogin from "./pages/CompleteLogin";
 import Home from "./pages/Home";
-import Profile from "./pages/Profile"; // Import the new Profile component
+import Profile from "./pages/Profile";
+import CollectionListPage from "./pages/Collections/List";
+import CollectionFileListPage from "./pages/Collections/List";
 
 // Protected route component
 function ProtectedRoute({ children }) {
@@ -51,8 +53,10 @@ function Navigation() {
         ) : (
           <>
             <li>
+              <Link to="/collections">Collections</Link>{" "}
+            </li>
+            <li>
               <Link to="/profile">Profile</Link>{" "}
-              {/* New link to profile page */}
             </li>
             <li>
               <button onClick={logout}>Logout</button>
@@ -90,6 +94,22 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/collections"
+          element={
+            <ProtectedRoute>
+              <CollectionListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/collections/:collectionId/files"
+          element={
+            <ProtectedRoute>
+              <CollectionFileListPage />
             </ProtectedRoute>
           }
         />

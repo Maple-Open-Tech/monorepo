@@ -7,10 +7,11 @@ export default defineConfig({
   server: {
     proxy: {
       // Proxy API requests to backend to avoid CORS issues
-      "/iam/api": {
-        target: "http://127.0.0.1:8000",
+      "/iam/api/v1": {
+        target: "http://localhost:8000",
         changeOrigin: true,
         secure: false,
+        rewrite: (path) => path,
       },
     },
   },

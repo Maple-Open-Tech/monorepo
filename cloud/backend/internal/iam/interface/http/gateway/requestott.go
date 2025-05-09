@@ -40,7 +40,7 @@ func NewGatewayRequestLoginOTTHTTPHandler(
 }
 
 func (*GatewayRequestLoginOTTHTTPHandler) Pattern() string {
-	return "POST /iam/api/v1/request-login-ott"
+	return "POST /iam/api/v1/request-ott"
 }
 
 func (r *GatewayRequestLoginOTTHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {

@@ -1,7 +1,7 @@
 // monorepo/web/prototyping/papercloud-cli/src/pages/RequestOTT.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import axios from "axios";
+import { authAPI } from "../services/api";
 
 function RequestOTT() {
   const navigate = useNavigate();
@@ -17,10 +17,8 @@ function RequestOTT() {
     setSuccess(false);
 
     try {
-      // In a real implementation, this would call the actual API
-      await axios.post("http://localhost:8000/iam/api/v1/request-ott", {
-        email,
-      });
+      // Use the API service instead of direct axios call
+      await authAPI.requestOTT(email);
 
       setSuccess(true);
       // Navigate to verify OTT page after successful request

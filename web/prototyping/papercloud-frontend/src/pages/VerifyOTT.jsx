@@ -1,7 +1,7 @@
 // monorepo/web/prototyping/papercloud-cli/src/pages/VerifyOTT.jsx
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
-import axios from "axios";
+import { authAPI } from "../services/api";
 
 function VerifyOTT() {
   const navigate = useNavigate();
@@ -28,14 +28,8 @@ function VerifyOTT() {
     setError(null);
 
     try {
-      // In a real implementation, this would call the actual API
-      const response = await axios.post(
-        "http://localhost:8000/iam/api/v1/verify-ott",
-        {
-          email,
-          ott,
-        },
-      );
+      // Use the API service instead of direct axios call
+      const response = await authAPI.verifyOTT(email, ott);
 
       // Response contains encrypted challenge and keys needed for password-based decryption
       const authData = response.data;

@@ -44,6 +44,7 @@ func (mid *middleware) Attach(fn http.HandlerFunc) http.HandlerFunc {
 	fn = mid.IPAddressMiddleware(fn)
 	fn = mid.URLProcessorMiddleware(fn)
 	fn = mid.RateLimitMiddleware(fn)
+	fn = mid.CORSMiddleware(fn)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Flow to the next middleware.

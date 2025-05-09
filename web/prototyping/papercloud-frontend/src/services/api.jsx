@@ -1,9 +1,9 @@
 // monorepo/web/prototyping/papercloud-cli/src/services/api.jsx
 import axios from "axios";
 
-// Create an axios instance with default config, using Vite's proxy feature
+// Create an axios instance with a relative URL (will use Vite's proxy)
 const api = axios.create({
-  baseURL: "/iam/api/v1", // This will be proxied by Vite
+  baseURL: "/iam/api/v1", // Relative URL that will be proxied
   headers: {
     "Content-Type": "application/json",
   },

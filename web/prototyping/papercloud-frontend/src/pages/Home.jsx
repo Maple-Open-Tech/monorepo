@@ -1,4 +1,4 @@
-import { react } from "react";
+// monorepo/web/prototyping/papercloud-cli/src/pages/Home.jsx
 
 function Home() {
   return (

@@ -1,3 +1,4 @@
+// monorepo/web/prototyping/papercloud-cli/src/utils/crypto.jsx
 import sodium from "libsodium-wrappers";
 
 /**

@@ -1,3 +1,4 @@
+// monorepo/web/prototyping/papercloud-cli/src/pages/Register.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import axios from "axios";

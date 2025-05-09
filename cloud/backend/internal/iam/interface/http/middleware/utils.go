@@ -2,8 +2,9 @@
 package middleware
 
 import (
-	"fmt"
 	"regexp"
+
+	"go.uber.org/zap"
 )
 
 type protectedRoute struct {
@@ -51,19 +52,21 @@ func init() {
 	}
 }
 
-func isProtectedPath(path string) bool {
+func isProtectedPath(logger *zap.Logger, path string) bool {
 	// fmt.Println("isProtectedPath - path:", path) // For debugging purposes only.
 
 	// Check exact matches first (O(1) lookup)
 	if exactPaths[path] {
-		fmt.Println("isProtectedPath - ✅ found via map", path) // For debugging purposes only.
+		logger.Debug("✅ found via map - url is protected",
+			zap.String("path", path))
 		return true
 	}
 
 	// Check patterns
 	for _, route := range patternRoutes {
 		if route.regex.MatchString(path) {
-			fmt.Println("isProtectedPath - ✅ found via regex", path) // For debugging purposes only.
+			logger.Debug("✅ found via regex - url is protected",
+				zap.String("path", path))
 			return true
 		}
 	}

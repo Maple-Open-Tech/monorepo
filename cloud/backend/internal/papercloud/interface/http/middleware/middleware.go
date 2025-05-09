@@ -8,6 +8,7 @@ import (
 	uc_bannedipaddress "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/papercloud/usecase/bannedipaddress"
 	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/papercloud/usecase/user"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/jwt"
+	"go.uber.org/zap"
 )
 
 type Middleware interface {
@@ -16,17 +17,21 @@ type Middleware interface {
 }
 
 type middleware struct {
+	logger                              *zap.Logger
 	jwt                                 jwt.Provider
 	userGetBySessionIDUseCase           uc_user.UserGetBySessionIDUseCase
 	bannedIPAddressListAllValuesUseCase uc_bannedipaddress.BannedIPAddressListAllValuesUseCase
 }
 
 func NewMiddleware(
+	logger *zap.Logger,
 	jwtp jwt.Provider,
 	uc1 uc_user.UserGetBySessionIDUseCase,
 	uc2 uc_bannedipaddress.BannedIPAddressListAllValuesUseCase,
 ) Middleware {
+	logger = logger.With(zap.String("module", "papercloud"))
 	return &middleware{
+		logger:                              logger,
 		jwt:                                 jwtp,
 		userGetBySessionIDUseCase:           uc1,
 		bannedIPAddressListAllValuesUseCase: uc2,
@@ -41,7 +46,7 @@ func (mid *middleware) Attach(fn http.HandlerFunc) http.HandlerFunc {
 		handler := mid.applyBaseMiddleware(fn)
 
 		// Check if the path requires authentication
-		if isProtectedPath(r.URL.Path) {
+		if isProtectedPath(mid.logger, r.URL.Path) {
 
 			// Apply auth middleware for protected paths
 			handler = mid.PostJWTProcessorMiddleware(handler)

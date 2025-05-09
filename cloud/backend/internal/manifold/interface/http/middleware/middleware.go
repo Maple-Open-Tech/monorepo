@@ -26,6 +26,7 @@ func NewMiddleware(
 	blp blacklist.Provider,
 	ipcountryblocker ipcb.Provider,
 ) Middleware {
+	loggerp = loggerp.With(zap.String("module", "manifold"))
 	return &middleware{
 		Logger:           loggerp,
 		Blacklist:        blp,

@@ -24,8 +24,6 @@ type FederatedUser struct {
 	LastName                                       string             `bson:"last_name" json:"last_name"`
 	Name                                           string             `bson:"name" json:"name"`
 	LexicalName                                    string             `bson:"lexical_name" json:"lexical_name"`
-	PasswordHashAlgorithm                          string             `bson:"password_hash_algorithm" json:"-"`
-	PasswordHash                                   string             `bson:"password_hash" json:"-"`
 	Role                                           int8               `bson:"role" json:"role"`
 	Status                                         int8               `bson:"status" json:"status"`
 	WasEmailVerified                               bool               `bson:"was_email_verified" json:"was_email_verified,omitempty"`
@@ -54,6 +52,16 @@ type FederatedUser struct {
 	AgreePromotions                                bool               `bson:"agree_promotions" json:"agree_promotions,omitempty"`
 	AgreeToTrackingAcrossThirdPartyAppsAndServices bool               `bson:"agree_to_tracking_across_third_party_apps_and_services" json:"agree_to_tracking_across_third_party_apps_and_services,omitempty"`
 
+	// --- E2EE Related ---
+	Salt                              string `json:"salt"`
+	PublicKey                         string `json:"publicKey"`
+	EncryptedMasterKey                string `json:"encryptedMasterKey"`
+	EncryptedPrivateKey               string `json:"encryptedPrivateKey"`
+	EncryptedRecoveryKey              string `json:"encryptedRecoveryKey"`
+	MasterKeyEncryptedWithRecoveryKey string `json:"masterKeyEncryptedWithRecoveryKey"`
+	VerificationID                    string `json:"verificationID"`
+
+	// --- Metadata ---
 	CreatedFromIPAddress  string             `bson:"created_from_ip_address" json:"created_from_ip_address"`
 	CreatedByUserID       primitive.ObjectID `bson:"created_by_user_id" json:"created_by_user_id"`
 	CreatedAt             time.Time          `bson:"created_at" json:"created_at"`

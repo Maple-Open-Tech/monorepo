@@ -10,6 +10,7 @@ import (
 type TemplatedEmailer interface {
 	SendUserVerificationEmail(ctx context.Context, monolithModule int, email, verificationCode, firstName string) error
 	SendUserPasswordResetEmail(ctx context.Context, monolithModule int, email, verificationCode, firstName string) error
+	SendUserLoginOneTimeTokenEmail(ctx context.Context, monolithModule int, email, oneTimeToken, firstName string) error
 }
 
 type templatedEmailer struct {

@@ -1,3 +1,4 @@
+// cloud/backend/internal/iam/usecase/module.go
 package usecase
 
 import (
@@ -15,6 +16,7 @@ func Module() fx.Option {
 			bannedipaddress.NewBannedIPAddressListAllValuesUseCase,
 			emailer.NewSendFederatedUserPasswordResetEmailUseCase,
 			emailer.NewSendFederatedUserVerificationEmailUseCase,
+			emailer.NewSendLoginOTTEmailUseCase,
 			federateduser.NewFederatedUserGetBySessionIDUseCase,
 			federateduser.NewFederatedUserCountByFilterUseCase,
 			federateduser.NewFederatedUserCreateUseCase,

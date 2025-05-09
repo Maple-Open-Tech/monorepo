@@ -7,17 +7,17 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.uber.org/zap"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/config/constants"
-	domain "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/domain/federateduser"
+	dom_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/domain/federateduser"
 	uc_emailer "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/usecase/emailer"
 	uc_user "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/usecase/federateduser"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/httperror"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/random"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/jwt"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/password"
-	sstring "github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/securestring"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/storage/database/mongodbcache"
 )
 
@@ -30,6 +30,7 @@ type GatewayFederatedUserRegisterService interface {
 
 type gatewayFederatedUserRegisterServiceImpl struct {
 	config                                    *config.Configuration
+	logger                                    *zap.Logger
 	passwordProvider                          password.Provider
 	cache                                     mongodbcache.Cacher
 	jwtProvider                               jwt.Provider
@@ -41,6 +42,7 @@ type gatewayFederatedUserRegisterServiceImpl struct {
 
 func NewGatewayFederatedUserRegisterService(
 	cfg *config.Configuration,
+	logger *zap.Logger,
 	pp password.Provider,
 	cach mongodbcache.Cacher,
 	jwtp jwt.Provider,
@@ -49,16 +51,15 @@ func NewGatewayFederatedUserRegisterService(
 	uc3 uc_user.FederatedUserUpdateUseCase,
 	uc4 uc_emailer.SendFederatedUserVerificationEmailUseCase,
 ) GatewayFederatedUserRegisterService {
-	return &gatewayFederatedUserRegisterServiceImpl{cfg, pp, cach, jwtp, uc1, uc2, uc3, uc4}
+	return &gatewayFederatedUserRegisterServiceImpl{cfg, logger, pp, cach, jwtp, uc1, uc2, uc3, uc4}
 }
 
 type RegisterCustomerRequestIDO struct {
+	// --- Application and personal identiable information (PII) ---
 	BetaAccessCode                                 string `json:"beta_access_code"` // Temporary code for beta access
 	FirstName                                      string `json:"first_name"`
 	LastName                                       string `json:"last_name"`
 	Email                                          string `json:"email"`
-	Password                                       string `json:"password"`
-	PasswordConfirm                                string `json:"password_confirm"`
 	Phone                                          string `json:"phone,omitempty"`
 	Country                                        string `json:"country,omitempty"`
 	CountryOther                                   string `json:"country_other,omitempty"`
@@ -69,17 +70,18 @@ type RegisterCustomerRequestIDO struct {
 
 	// Module refers to which module the user is registering for.
 	Module int `json:"module,omitempty"`
+
+	// --- E2EE Related ---
+	Salt                              string `json:"salt"`
+	PublicKey                         string `json:"publicKey"`
+	EncryptedMasterKey                string `json:"encryptedMasterKey"`
+	EncryptedPrivateKey               string `json:"encryptedPrivateKey"`
+	EncryptedRecoveryKey              string `json:"encryptedRecoveryKey"`
+	MasterKeyEncryptedWithRecoveryKey string `json:"masterKeyEncryptedWithRecoveryKey"`
+	VerificationID                    string `json:"verificationID"`
 }
 
-type RegisterCustomerResponseIDO struct {
-	FederatedUser          *domain.FederatedUser `json:"federateduser"`
-	AccessToken            string                `json:"access_token"`
-	AccessTokenExpiryTime  time.Time             `json:"access_token_expiry_time"`
-	RefreshToken           string                `json:"refresh_token"`
-	RefreshTokenExpiryTime time.Time             `json:"refresh_token_expiry_time"`
-}
-
-func (s *gatewayFederatedUserRegisterServiceImpl) Execute(
+func (svc *gatewayFederatedUserRegisterServiceImpl) Execute(
 	sessCtx context.Context,
 	req *RegisterCustomerRequestIDO,
 ) error {
@@ -92,10 +94,6 @@ func (s *gatewayFederatedUserRegisterServiceImpl) Execute(
 	req.Email = strings.ReplaceAll(req.Email, " ", "")
 	req.Email = strings.ReplaceAll(req.Email, "\t", "")
 	req.Email = strings.TrimSpace(req.Email)
-	req.Password = strings.ReplaceAll(req.Password, " ", "")
-	req.Password = strings.ReplaceAll(req.Password, "\t", "")
-	req.Password = strings.TrimSpace(req.Password)
-	// password, err := sstring.NewSecureString(unsecurePassword)
 
 	//
 	// STEP 2: Validation of input.
@@ -105,7 +103,7 @@ func (s *gatewayFederatedUserRegisterServiceImpl) Execute(
 	if req.BetaAccessCode == "" {
 		e["beta_access_code"] = "Beta access code is required"
 	} else {
-		if req.BetaAccessCode != s.config.App.BetaAccessCode {
+		if req.BetaAccessCode != svc.config.App.BetaAccessCode {
 			e["beta_access_code"] = "Invalid beta access code"
 		}
 	}
@@ -121,28 +119,14 @@ func (s *gatewayFederatedUserRegisterServiceImpl) Execute(
 	if len(req.Email) > 255 {
 		e["email"] = "Email is too long"
 	}
-	if req.Password == "" {
-		e["password"] = "Password is required"
-	}
-	if req.PasswordConfirm == "" {
-		e["password_confirm"] = "Password confirm is required"
-	}
-	if req.PasswordConfirm != req.Password {
-		e["password"] = "Password does not match"
-		e["password_confirm"] = "Password does not match"
-	}
 	if req.Phone == "" {
-		e["phone"] = "Phone confirm is required"
+		e["phone"] = "Phone number is required"
 	}
 	if req.Country == "" {
 		e["country"] = "Country is required"
-	} else {
-		if req.Country == "Other" && req.CountryOther == "" {
-			e["country_other"] = "Specify country is required"
-		}
 	}
 	if req.Timezone == "" {
-		e["timezone"] = "Password confirm is required"
+		e["timezone"] = "Timezone is required"
 	}
 	if req.AgreeTermsOfService == false {
 		e["agree_terms_of_service"] = "Agreeing to terms of service is required and you must agree to the terms before proceeding"
@@ -150,9 +134,33 @@ func (s *gatewayFederatedUserRegisterServiceImpl) Execute(
 	if req.Module == 0 {
 		e["module"] = "Module is required"
 	} else {
-		if req.Module != int(constants.MonolithModuleIncomePropertyEvaluator) {
+		// Assuming MonolithModulePaperCloudPropertyEvaluator is the only valid module for now
+		if req.Module != int(constants.MonolithModulePaperCloudPropertyEvaluator) {
 			e["module"] = "Module is invalid"
 		}
+	}
+
+	// --- E2EE Related Validation ---
+	if req.Salt == "" {
+		e["salt"] = "Salt is required"
+	}
+	if req.PublicKey == "" {
+		e["publicKey"] = "Public key is required"
+	}
+	if req.EncryptedMasterKey == "" {
+		e["encryptedMasterKey"] = "Encrypted master key is required"
+	}
+	if req.EncryptedPrivateKey == "" {
+		e["encryptedPrivateKey"] = "Encrypted private key is required"
+	}
+	if req.EncryptedRecoveryKey == "" {
+		e["encryptedRecoveryKey"] = "Encrypted recovery key is required"
+	}
+	if req.MasterKeyEncryptedWithRecoveryKey == "" {
+		e["masterKeyEncryptedWithRecoveryKey"] = "Master key encrypted with recovery key is required"
+	}
+	if req.VerificationID == "" {
+		e["verificationID"] = "Verification ID is required"
 	}
 
 	if len(e) != 0 {
@@ -164,39 +172,29 @@ func (s *gatewayFederatedUserRegisterServiceImpl) Execute(
 	//
 
 	// Lookup the federateduser in our database, else return a `400 Bad Request` error.
-	u, err := s.userGetByEmailUseCase.Execute(sessCtx, req.Email)
+	u, err := svc.userGetByEmailUseCase.Execute(sessCtx, req.Email)
 	if err != nil {
+		svc.logger.Error("failed getting user by email from database",
+			zap.Any("error", err))
 		return err
 	}
 	if u != nil {
 		return httperror.NewForBadRequestWithSingleField("email", "Email address already exists")
 	}
-
 	// Create our federateduser.
-	u, err = s.createCustomerFederatedUserForRequest(sessCtx, req)
+	u, err = svc.createCustomerFederatedUserForRequest(sessCtx, req)
 	if err != nil {
 		return err
 	}
 
-	if err := s.sendFederatedUserVerificationEmailUseCase.Execute(context.Background(), req.Module, u); err != nil {
+	if err := svc.sendFederatedUserVerificationEmailUseCase.Execute(context.Background(), req.Module, u); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *gatewayFederatedUserRegisterServiceImpl) createCustomerFederatedUserForRequest(sessCtx context.Context, req *RegisterCustomerRequestIDO) (*domain.FederatedUser, error) {
-
-	password, err := sstring.NewSecureString(req.Password)
-	if err != nil {
-		return nil, err
-	}
-	defer password.Wipe()
-
-	passwordHash, err := s.passwordProvider.GenerateHashFromPassword(password)
-	if err != nil {
-		return nil, err
-	}
+func (s *gatewayFederatedUserRegisterServiceImpl) createCustomerFederatedUserForRequest(sessCtx context.Context, req *RegisterCustomerRequestIDO) (*dom_user.FederatedUser, error) {
 
 	ipAddress, _ := sessCtx.Value(constants.SessionIPAddress).(string)
 
@@ -206,26 +204,34 @@ func (s *gatewayFederatedUserRegisterServiceImpl) createCustomerFederatedUserFor
 	}
 
 	userID := primitive.NewObjectID()
-	u := &domain.FederatedUser{
-		ID:                    userID,
-		FirstName:             req.FirstName,
-		LastName:              req.LastName,
-		Name:                  fmt.Sprintf("%s %s", req.FirstName, req.LastName),
-		LexicalName:           fmt.Sprintf("%s, %s", req.LastName, req.FirstName),
-		Email:                 req.Email,
-		PasswordHash:          passwordHash,
-		PasswordHashAlgorithm: s.passwordProvider.AlgorithmName(),
-		Role:                  domain.FederatedUserRoleIndividual,
-		Phone:                 req.Phone,
-		Country:               req.Country,
-		Timezone:              req.Timezone,
-		Region:                "",
-		City:                  "",
-		PostalCode:            "",
-		AddressLine1:          "",
-		AddressLine2:          "",
-		AgreeTermsOfService:   req.AgreeTermsOfService,
-		AgreePromotions:       req.AgreePromotions,
+	u := &dom_user.FederatedUser{
+		// --- E2EE ---
+		Salt:                              req.Salt,
+		PublicKey:                         req.PublicKey,
+		EncryptedMasterKey:                req.EncryptedMasterKey,
+		EncryptedPrivateKey:               req.EncryptedPrivateKey,
+		EncryptedRecoveryKey:              req.EncryptedRecoveryKey,
+		MasterKeyEncryptedWithRecoveryKey: req.MasterKeyEncryptedWithRecoveryKey,
+		VerificationID:                    req.VerificationID,
+
+		// --- The rest of the stuff... ---
+		ID:                  userID,
+		FirstName:           req.FirstName,
+		LastName:            req.LastName,
+		Name:                fmt.Sprintf("%s %s", req.FirstName, req.LastName),
+		LexicalName:         fmt.Sprintf("%s, %s", req.LastName, req.FirstName),
+		Email:               req.Email,
+		Role:                dom_user.FederatedUserRoleIndividual,
+		Phone:               req.Phone,
+		Country:             req.Country,
+		Timezone:            req.Timezone,
+		Region:              "",
+		City:                "",
+		PostalCode:          "",
+		AddressLine1:        "",
+		AddressLine2:        "",
+		AgreeTermsOfService: req.AgreeTermsOfService,
+		AgreePromotions:     req.AgreePromotions,
 		AgreeToTrackingAcrossThirdPartyAppsAndServices: req.AgreeToTrackingAcrossThirdPartyAppsAndServices,
 		CreatedByUserID:         userID,
 		CreatedAt:               time.Now(),
@@ -238,7 +244,7 @@ func (s *gatewayFederatedUserRegisterServiceImpl) createCustomerFederatedUserFor
 		WasEmailVerified:        false,
 		EmailVerificationCode:   fmt.Sprintf("%s", emailVerificationCode),
 		EmailVerificationExpiry: time.Now().Add(72 * time.Hour),
-		Status:                  domain.FederatedUserStatusActive,
+		Status:                  dom_user.FederatedUserStatusActive,
 		HasShippingAddress:      false,
 		ShippingName:            "",
 		ShippingPhone:           "",

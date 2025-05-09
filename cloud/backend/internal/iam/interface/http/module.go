@@ -1,3 +1,4 @@
+// cloud/backend/internal/iam/interface/http/module.go
 package http
 
 import (
@@ -17,12 +18,16 @@ func Module() fx.Option {
 		fx.Provide(
 			unifiedhttp.AsRoute(commonhttp.NewGetMapleSendVersionHTTPHandler),
 			unifiedhttp.AsRoute(gateway.NewGatewayFederatedUserRegisterHTTPHandler),
-			unifiedhttp.AsRoute(gateway.NewGatewayLoginHTTPHandler),
+			unifiedhttp.AsRoute(gateway.NewGatewayVerifyEmailHTTPHandler),
+			// Add the new E2EE login handlers
+			unifiedhttp.AsRoute(gateway.NewGatewayRequestLoginOTTHTTPHandler),
+			unifiedhttp.AsRoute(gateway.NewGatewayVerifyLoginOTTHTTPHandler),
+			unifiedhttp.AsRoute(gateway.NewGatewayCompleteLoginHTTPHandler),
+			// Other handlers
 			unifiedhttp.AsRoute(gateway.NewGatewayLogoutHTTPHandler),
 			unifiedhttp.AsRoute(gateway.NewGatewayRefreshTokenHTTPHandler),
-			unifiedhttp.AsRoute(gateway.NewGatewayResetPasswordHTTPHandler),
-			unifiedhttp.AsRoute(gateway.NewGatewayForgotPasswordHTTPHandler),
-			unifiedhttp.AsRoute(gateway.NewGatewayVerifyEmailHTTPHandler),
+			// unifiedhttp.AsRoute(gateway.NewGatewayResetPasswordHTTPHandler),
+			// unifiedhttp.AsRoute(gateway.NewGatewayForgotPasswordHTTPHandler),
 		),
 	)
 }

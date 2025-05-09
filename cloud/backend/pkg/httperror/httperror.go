@@ -46,6 +46,13 @@ func NewForBadRequestWithSingleField(field string, message string) error {
 	}
 }
 
+func NewForInternalServerErrorWithSingleField(field string, message string) error {
+	return HTTPError{
+		Code:   http.StatusInternalServerError,
+		Errors: &map[string]string{field: message},
+	}
+}
+
 // NewForNotFoundWithSingleField create a new HTTPError instance pertaining to 404 not found for a single field. This is a convinience constructor.
 func NewForNotFoundWithSingleField(field string, message string) error {
 	return HTTPError{

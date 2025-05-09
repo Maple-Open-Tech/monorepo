@@ -1,10 +1,10 @@
+// cloud/backend/internal/iam/service/module.go
 package service
 
 import (
 	"go.uber.org/fx"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/service/gateway"
-	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/service/me"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/iam/service/token"
 )
 
@@ -14,17 +14,21 @@ func Module() fx.Option {
 			token.NewTokenVerifyService,
 			token.NewTokenGetSessionService,
 			gateway.NewGatewayFederatedUserRegisterService,
-			gateway.NewGatewayLoginService,
-			gateway.NewGatewayLogoutService,
-			gateway.NewGatewayResetPasswordService,
-			gateway.NewGatewaySendVerifyEmailService,
 			gateway.NewGatewayVerifyEmailService,
+			// Add the new E2EE login services
+			gateway.NewGatewayRequestLoginOTTService,
+			gateway.NewGatewayVerifyLoginOTTService,
+			gateway.NewGatewayCompleteLoginService,
+			// Other services
+			gateway.NewGatewayLogoutService,
+			// gateway.NewGatewaySendVerifyEmailService,
 			gateway.NewGatewayRefreshTokenService,
-			gateway.NewGatewayForgotPasswordService,
-			me.NewGetMeService,
-			me.NewUpdateMeService,
-			me.NewVerifyProfileService,
-			me.NewDeleteMeService,
+			// gateway.NewGatewayResetPasswordService,
+			// gateway.NewGatewayForgotPasswordService,
+			// me.NewGetMeService,
+			// me.NewUpdateMeService,
+			// me.NewVerifyProfileService,
+			// me.NewDeleteMeService,
 		),
 	)
 }

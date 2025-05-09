@@ -115,11 +115,11 @@ func (svc *deleteMeServiceImpl) Execute(sessCtx context.Context, req *DeleteMeRe
 	}
 	defer securePassword.Wipe()
 
-	passwordMatch, _ := svc.passwordProvider.ComparePasswordAndHash(securePassword, federateduser.PasswordHash)
-	if !passwordMatch {
-		svc.logger.Warn("Password verification failed")
-		return httperror.NewForBadRequestWithSingleField("password", "Incorrect password")
-	}
+	// passwordMatch, _ := svc.passwordProvider.ComparePasswordAndHash(securePassword, federateduser.PasswordHash)
+	// if !passwordMatch {
+	// 	svc.logger.Warn("Password verification failed")
+	// 	return httperror.NewForBadRequestWithSingleField("password", "Incorrect password")
+	// }
 
 	//
 	// STEP 5: Delete federateduser.

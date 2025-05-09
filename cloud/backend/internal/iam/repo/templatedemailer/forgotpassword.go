@@ -11,13 +11,13 @@ import (
 func (impl *templatedEmailer) SendUserPasswordResetEmail(ctx context.Context, monolithModule int, email, verificationCode, firstName string) error {
 	switch monolithModule {
 	case 1:
-		return impl.SendIncomePropertyEvaluatorUserPasswordResetEmail(ctx, email, verificationCode, firstName)
+		return impl.SendPaperCloudPropertyEvaluatorUserPasswordResetEmail(ctx, email, verificationCode, firstName)
 	default:
 		return fmt.Errorf("unsupported monolith module: %d", monolithModule)
 	}
 }
 
-func (impl *templatedEmailer) SendIncomePropertyEvaluatorUserPasswordResetEmail(ctx context.Context, email, verificationCode, firstName string) error {
+func (impl *templatedEmailer) SendPaperCloudPropertyEvaluatorUserPasswordResetEmail(ctx context.Context, email, verificationCode, firstName string) error {
 
 	fp := path.Join("templates", "iam/forgot_password.html")
 	tmpl, err := template.ParseFiles(fp)

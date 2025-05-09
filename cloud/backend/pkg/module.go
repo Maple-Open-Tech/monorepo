@@ -11,17 +11,18 @@ import (
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/security/password"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/storage/database/mongodb"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/storage/database/mongodbcache"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/pkg/storage/object/s3"
 )
 
 func Module() fx.Option {
 	return fx.Options(
 		fx.Provide(
 			fx.Annotate(
-				mailgun.NewIncomePropertyEvaluatorModuleEmailer,
-				fx.ResultTags(`name:"income-property-evaluator-module-emailer"`), // Create name for better dependency management handling.
+				mailgun.NewPaperCloudPropertyEvaluatorModuleEmailer,
+				fx.ResultTags(`name:"papercloud-module-emailer"`), // Create name for better dependency management handling.
 			),
 			fx.Annotate(
-				mailgun.NewIncomePropertyEvaluatorModuleEmailer, //TODO: TEMPORARILY USED AS AN EXAMPLE.
+				mailgun.NewPaperCloudPropertyEvaluatorModuleEmailer, //TODO: TEMPORARILY USED AS AN EXAMPLE.
 				fx.ResultTags(`name:"maplesend-module-emailer"`),
 			),
 		),
@@ -33,6 +34,7 @@ func Module() fx.Option {
 			password.NewProvider,
 			mongodb.NewProvider,
 			mongodbcache.NewProvider,
+			s3.NewProvider,
 		),
 	)
 }

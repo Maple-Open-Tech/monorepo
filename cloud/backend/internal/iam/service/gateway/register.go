@@ -208,20 +208,20 @@ func (s *gatewayFederatedUserRegisterServiceImpl) createCustomerFederatedUserFor
 	}
 
 	// Decode base64 encoded crypto values
-	saltBytes, err := base64.StdEncoding.DecodeString(req.Salt)
+	saltBytes, err := base64.RawURLEncoding.DecodeString(req.Salt)
 	if err != nil {
 		s.logger.Error("failed decoding salt", zap.Error(err))
 		return nil, fmt.Errorf("invalid salt format: %w", err)
 	}
 
-	publicKeyBytes, err := base64.StdEncoding.DecodeString(req.PublicKey)
+	publicKeyBytes, err := base64.RawURLEncoding.DecodeString(req.PublicKey)
 	if err != nil {
 		s.logger.Error("failed decoding public key", zap.Error(err))
 		return nil, fmt.Errorf("invalid public key format: %w", err)
 	}
 
 	// Process EncryptedMasterKey - expect base64 encoded data with nonce and ciphertext
-	encMasterKeyBytes, err := base64.StdEncoding.DecodeString(req.EncryptedMasterKey)
+	encMasterKeyBytes, err := base64.RawURLEncoding.DecodeString(req.EncryptedMasterKey)
 	if err != nil {
 		s.logger.Error("failed decoding encrypted master key", zap.Error(err))
 		return nil, fmt.Errorf("invalid encrypted master key format: %w", err)
@@ -237,7 +237,7 @@ func (s *gatewayFederatedUserRegisterServiceImpl) createCustomerFederatedUserFor
 	}
 
 	// Process EncryptedPrivateKey
-	encPrivateKeyBytes, err := base64.StdEncoding.DecodeString(req.EncryptedPrivateKey)
+	encPrivateKeyBytes, err := base64.RawURLEncoding.DecodeString(req.EncryptedPrivateKey)
 	if err != nil {
 		s.logger.Error("failed decoding encrypted private key", zap.Error(err))
 		return nil, fmt.Errorf("invalid encrypted private key format: %w", err)
@@ -252,7 +252,7 @@ func (s *gatewayFederatedUserRegisterServiceImpl) createCustomerFederatedUserFor
 	}
 
 	// Process EncryptedRecoveryKey
-	encRecoveryKeyBytes, err := base64.StdEncoding.DecodeString(req.EncryptedRecoveryKey)
+	encRecoveryKeyBytes, err := base64.RawURLEncoding.DecodeString(req.EncryptedRecoveryKey)
 	if err != nil {
 		s.logger.Error("failed decoding encrypted recovery key", zap.Error(err))
 		return nil, fmt.Errorf("invalid encrypted recovery key format: %w", err)
@@ -267,7 +267,7 @@ func (s *gatewayFederatedUserRegisterServiceImpl) createCustomerFederatedUserFor
 	}
 
 	// Process MasterKeyEncryptedWithRecoveryKey
-	encMasterWithRecoveryBytes, err := base64.StdEncoding.DecodeString(req.MasterKeyEncryptedWithRecoveryKey)
+	encMasterWithRecoveryBytes, err := base64.RawURLEncoding.DecodeString(req.MasterKeyEncryptedWithRecoveryKey)
 	if err != nil {
 		s.logger.Error("failed decoding master key encrypted with recovery key", zap.Error(err))
 		return nil, fmt.Errorf("invalid master key encrypted with recovery key format: %w", err)

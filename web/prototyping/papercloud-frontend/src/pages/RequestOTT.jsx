@@ -18,7 +18,9 @@ function RequestOTT() {
 
     try {
       // In a real implementation, this would call the actual API
-      await axios.post("http://localhost:8080/api/auth/request-ott", { email });
+      await axios.post("http://localhost:8000/iam/api/v1/request-ott", {
+        email,
+      });
 
       setSuccess(true);
       // Navigate to verify OTT page after successful request

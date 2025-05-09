@@ -30,7 +30,7 @@ function VerifyOTT() {
     try {
       // In a real implementation, this would call the actual API
       const response = await axios.post(
-        "http://localhost:8080/api/auth/verify-ott",
+        "http://localhost:8000/iam/api/v1/verify-ott",
         {
           email,
           ott,

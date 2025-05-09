@@ -141,7 +141,7 @@ function CompleteLogin() {
 
       // Complete login by sending the decrypted challenge back to the server
       const response = await axios.post(
-        "http://localhost:8080/api/auth/complete-login",
+        "http://localhost:8000/iam/api/v1/complete-login",
         {
           email,
           challengeId,

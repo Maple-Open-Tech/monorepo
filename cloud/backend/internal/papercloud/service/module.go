@@ -31,6 +31,7 @@ func Module() fx.Option {
 			file.NewUpdateFileService,
 			file.NewDeleteFileService,
 			file.NewListFilesByCollectionService,
+			file.NewStoreFileDataService,
 		),
 	)
 }

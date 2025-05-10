@@ -39,6 +39,7 @@ func Module() fx.Option {
 			unifiedhttp.AsRoute(file.NewUpdateFileHTTPHandler),
 			unifiedhttp.AsRoute(file.NewDeleteFileHTTPHandler),
 			unifiedhttp.AsRoute(file.NewListFilesByCollectionHTTPHandler),
+			unifiedhttp.AsRoute(file.NewStoreFileDataHTTPHandler),
 		),
 	)
 }

@@ -2,8 +2,10 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { collectionsAPI } from "../../services/collectionApi";
+import { useAuth } from "../../contexts/AuthContext"; // Import useAuth
 
 function CollectionListPage() {
+  const { masterKey, isLoading: authIsLoading } = useAuth(); // Get masterKey and auth loading state
   const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -37,11 +39,16 @@ function CollectionListPage() {
     // This is a simplified example
     const name = prompt("Enter collection name:");
     if (name) {
+      console.log("handleCreateCollection: masterKey at start of if(name):", masterKey);
       try {
-        // In a real implementation, you would get the master key securely
-        const dummyMasterKey = new Uint8Array(32).fill(1);
-
-        await collectionsAPI.createCollection(name, "", dummyMasterKey);
+        if (!masterKey) {
+          setError("Master key is not available. Cannot create collection.");
+          console.error("Error creating collection: Master key missing from AuthContext.");
+          return;
+        }
+        console.log("handleCreateCollection: masterKey just before API call:", masterKey);
+        // Arguments: name, path, type, masterKey
+        await collectionsAPI.createCollection(name, "", "folder", masterKey);
         // Refresh the collections list
         const response = await collectionsAPI.listCollections();
         if (response && response.collections) {
@@ -64,7 +71,12 @@ function CollectionListPage() {
 
       {error && <div style={{ color: "red" }}>{error}</div>}
 
-      <button onClick={handleCreateCollection}>Create New Collection</button>
+      <button onClick={handleCreateCollection} disabled={authIsLoading || !masterKey}>Create New Collection</button>
+      {(authIsLoading || !masterKey) && !error && (
+        <p style={{ color: "orange", fontSize: "0.9em", marginTop: "5px" }}>
+          {authIsLoading ? "Authentication context loading..." : "Master key not yet available. Please ensure you are fully logged in."}
+        </p>
+      )}
 
       {collections.length === 0 ? (
         <p>No collections found. Create your first one!</p>

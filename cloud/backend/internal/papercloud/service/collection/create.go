@@ -29,6 +29,7 @@ type CollectionResponseDTO struct {
 	Name      string    `json:"name"`
 	Path      string    `json:"path"`
 	Type      string    `json:"type"`
+	EncryptedCollectionKey keys.EncryptedCollectionKey `json:"encrypted_collection_key,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Members   []struct {
@@ -139,6 +140,7 @@ func (svc *createCollectionServiceImpl) Execute(sessCtx context.Context, req *Cr
 		Name:      collection.Name,
 		Path:      collection.Path,
 		Type:      collection.Type,
+		EncryptedCollectionKey: collection.EncryptedCollectionKey,
 		CreatedAt: collection.CreatedAt,
 		UpdatedAt: collection.UpdatedAt,
 		Members: make([]struct {

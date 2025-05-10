@@ -104,6 +104,7 @@ func (svc *getCollectionServiceImpl) Execute(sessCtx context.Context, collection
 		Name:      collection.Name,
 		Path:      collection.Path,
 		Type:      collection.Type,
+		EncryptedCollectionKey: collection.EncryptedCollectionKey,
 		CreatedAt: collection.CreatedAt,
 		UpdatedAt: collection.UpdatedAt,
 		Members: make([]struct {

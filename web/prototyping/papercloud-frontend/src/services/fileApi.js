@@ -126,27 +126,28 @@ export const fileAPI = {
     }
   },
 
-  // Store the encrypted file data to S3
+  // Updated storeEncryptedFileData method from fileApi.js
   storeEncryptedFileData: async (fileId, encryptedData) => {
     try {
+      console.log(
+        `Storing encrypted data for file ${fileId} (${encryptedData.length} bytes)`,
+      );
+
       // Create a blob from the encrypted data
       const blob = new Blob([encryptedData]);
 
       // Create a FormData object to send the file
       const formData = new FormData();
-      formData.append("file", blob);
-
-      // Set up headers for the request
-      const headers = {
-        "Content-Type": "multipart/form-data",
-      };
+      formData.append("file", blob, "encrypted_file.bin");
 
       // Send the encrypted data to the server
+      // Note: No need to set Content-Type header - the request interceptor will handle it
       const response = await paperCloudApi.post(
         `/files/${fileId}/data`,
         formData,
-        { headers },
       );
+
+      console.log("File data upload response:", response.data);
       return response.data;
     } catch (error) {
       console.error("Error storing encrypted file data:", error);
@@ -315,21 +316,12 @@ export const fileAPI = {
 
       // Upload the encrypted file content to S3 using the storeEncryptedData method
       try {
-        // Since our current backend doesn't have a separate endpoint for file content,
-        // we're going to simulate this step for the prototype
         console.log(
           `Uploading encrypted file content (${fileToUpload.length} bytes) to ${createdFile.storage_path}`,
         );
 
-        // In a real implementation, we would call a backend endpoint to store the encrypted data
-        // For example: await storeEncryptedFileData(createdFile.id, fileToUpload);
-
-        // For the prototype, we'll create a blob URL to simulate access to the file
-        const blob = new Blob([fileToUpload]);
-        const url = URL.createObjectURL(blob);
-
-        // Add the URL to the created file (this wouldn't be in a real implementation)
-        createdFile.localBlobUrl = url;
+        // Actually call the endpoint to store the file data
+        await fileAPI.storeEncryptedFileData(createdFile.id, fileToUpload);
 
         console.log(`File ${createdFile.id} uploaded successfully!`);
       } catch (uploadError) {

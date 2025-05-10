@@ -10,18 +10,22 @@ import tokenManager from "./TokenManager";
 export const createApiInstance = (baseURL) => {
   const instance = axios.create({
     baseURL,
-    headers: {
-      "Content-Type": "application/json",
-    },
+    // Remove default content-type to let axios decide based on the data
   });
 
-  // Add request interceptor to include auth token
+  // Add request interceptor to include auth token and set appropriate content type
   instance.interceptors.request.use(
     (config) => {
       const token = tokenManager.getAccessToken();
       if (token) {
         config.headers["Authorization"] = `JWT ${token}`;
       }
+
+      // Only set Content-Type for non-FormData requests
+      if (!(config.data instanceof FormData)) {
+        config.headers["Content-Type"] = "application/json";
+      }
+
       return config;
     },
     (error) => {

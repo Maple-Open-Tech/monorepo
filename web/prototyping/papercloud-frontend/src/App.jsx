@@ -14,7 +14,8 @@ import CompleteLogin from "./pages/CompleteLogin";
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import CollectionListPage from "./pages/Collections/List";
-import CollectionFileListPage from "./pages/Collections/List";
+import CollectionFileListPage from "./pages/Collections/Files/List";
+import FileUploadPage from "./pages/Collections/Files/Upload";
 
 // Protected route component
 function ProtectedRoute({ children }) {
@@ -110,6 +111,15 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <CollectionFileListPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* New route for file upload */}
+        <Route
+          path="/collections/:collectionId/upload"
+          element={
+            <ProtectedRoute>
+              <FileUploadPage />
             </ProtectedRoute>
           }
         />

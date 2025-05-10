@@ -24,8 +24,7 @@ func init() {
 		"/papercloud/api/v1/me/delete":   true,
 		"/papercloud/api/v1/dashboard":   true,
 		"/papercloud/api/v1/collections": true,
-		//TODO: Collections
-		//TODO: Files
+		"/papercloud/api/v1/files":       true,
 	}
 
 	// Pattern matches
@@ -35,6 +34,8 @@ func init() {
 		// "^/papercloud/api/v1/public-wallets/0x[0-9a-fA-F]{40}$", // Regex designed for ethereum addresses.
 		// "^/papercloud/api/v1/users/[0-9a-f]+$",                  // Regex designed for mongodb ids.
 		"^/papercloud/api/v1/collections/[a-zA-Z0-9-]+$", // Regex designed for collection IDs
+		"^/papercloud/api/v1/files/[a-zA-Z0-9-]+$",       // Regex designed for collection IDs
+		"^/papercloud/api/v1/collections/[a-zA-Z0-9-]+/files$",
 		//TODO: Collections
 		//TODO: Files
 	}
@@ -67,6 +68,9 @@ func isProtectedPath(logger *zap.Logger, path string) bool {
 			return true
 		}
 	}
+
+	logger.Debug("❌ not found",
+		zap.String("path", path))
 
 	return false
 }

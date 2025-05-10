@@ -1,6 +1,7 @@
 // src/services/fileApi.js
 import { paperCloudApi } from "./apiConfig";
 import { cryptoUtils, initSodium } from "../utils/crypto"; // Import initSodium
+import { collectionsAPI } from "./collectionApi"; // Import collectionsAPI
 import _sodium from "libsodium-wrappers-sumo";
 
 // File API functions

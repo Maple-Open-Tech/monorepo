@@ -30,19 +30,20 @@ type CreateFileRequestDTO struct {
 }
 
 type FileResponseDTO struct {
-	ID                    string    `json:"id"`
-	CollectionID          string    `json:"collection_id"`
-	OwnerID               string    `json:"owner_id"`
-	FileID                string    `json:"file_id"`
-	StoragePath           string    `json:"storage_path"`
-	EncryptedSize         int64     `json:"encrypted_size"`
-	EncryptedOriginalSize string    `json:"encrypted_original_size"`
-	EncryptedMetadata     string    `json:"encrypted_metadata"`
-	EncryptionVersion     string    `json:"encryption_version"`
-	EncryptedHash         string    `json:"encrypted_hash"`
-	EncryptedThumbnail    string    `json:"encrypted_thumbnail,omitempty"`
-	CreatedAt             time.Time `json:"created_at"`
-	ModifiedAt            time.Time `json:"modified_at"`
+	ID                    string                `json:"id"`
+	CollectionID          string                `json:"collection_id"`
+	OwnerID               string                `json:"owner_id"`
+	FileID                string                `json:"file_id"`
+	StoragePath           string                `json:"storage_path"`
+	EncryptedSize         int64                 `json:"encrypted_size"`
+	EncryptedOriginalSize string                `json:"encrypted_original_size"`
+	EncryptedMetadata     string                `json:"encrypted_metadata"`
+	EncryptionVersion     string                `json:"encryption_version"`
+	EncryptedHash         string                `json:"encrypted_hash"`
+	EncryptedFileKey      keys.EncryptedFileKey `json:"encrypted_file_key,omitempty"`
+	EncryptedThumbnail    string                `json:"encrypted_thumbnail,omitempty"`
+	CreatedAt             time.Time             `json:"created_at"`
+	ModifiedAt            time.Time             `json:"modified_at"`
 }
 
 type CreateFileService interface {
@@ -201,6 +202,7 @@ func (svc *createFileServiceImpl) Execute(sessCtx context.Context, req *CreateFi
 		EncryptedMetadata:     file.EncryptedMetadata,
 		EncryptionVersion:     file.EncryptionVersion,
 		EncryptedHash:         file.EncryptedHash,
+		EncryptedFileKey:      file.EncryptedFileKey,
 		EncryptedThumbnail:    file.EncryptedThumbnail,
 		CreatedAt:             file.CreatedAt,
 		ModifiedAt:            file.ModifiedAt,

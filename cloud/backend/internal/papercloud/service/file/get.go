@@ -113,6 +113,7 @@ func (svc *getFileServiceImpl) Execute(sessCtx context.Context, fileID string) (
 		EncryptedMetadata:     file.EncryptedMetadata,
 		EncryptionVersion:     file.EncryptionVersion,
 		EncryptedHash:         file.EncryptedHash,
+		EncryptedFileKey:      file.EncryptedFileKey,
 		EncryptedThumbnail:    file.EncryptedThumbnail,
 		CreatedAt:             file.CreatedAt,
 		ModifiedAt:            file.ModifiedAt,

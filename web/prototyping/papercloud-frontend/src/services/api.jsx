@@ -1,6 +1,7 @@
 // monorepo/web/prototyping/papercloud-cli/src/services/api.jsx
 import axios from "axios";
 import tokenManager from "./TokenManager";
+import { collectionsAPI } from "./collectionApi";
 
 // Create an axios instance with a RELATIVE URL path
 // This is critical for the Vite proxy to work properly
@@ -127,5 +128,8 @@ export const userAPI = {
     return paperCloudApi.put("/me", profileData);
   },
 };
+
+// Export the collections API
+export { collectionsAPI };
 
 export default api;

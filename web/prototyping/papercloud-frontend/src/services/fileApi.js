@@ -109,6 +109,11 @@ export const fileAPI = {
   getFile: async (fileId) => {
     try {
       const response = await paperCloudApi.get(`/files/${fileId}`);
+      // Log the raw response data from this specific API call
+      console.log(
+        `[fileAPI.getFile response for ${fileId}]:`,
+        JSON.stringify(response.data, null, 2),
+      );
       return response.data;
     } catch (error) {
       console.error("Error getting file:", error);
@@ -198,7 +203,7 @@ export const fileAPI = {
 
       // Step 5: Encrypt the file key with the master key
       console.log("Encrypting file key with master key...");
-      const { nonce: keyNonce, ciphertext: encryptedFileKey } =
+      const { nonce: keyNonce, ciphertext: encryptedFileKeyCiphertext } =
         await cryptoUtils.encrypt(fileKey, masterKey);
 
       // Step 6: Encrypt the file content with the file key
@@ -238,7 +243,7 @@ export const fileAPI = {
         encrypted_metadata: base64Metadata,
         // Store file key encrypted with master key
         encrypted_file_key: {
-          ciphertext: Array.from(encryptedFileKey),
+          ciphertext: Array.from(encryptedFileKeyCiphertext),
           nonce: Array.from(keyNonce),
         },
         encryption_version: "1.0",
@@ -247,7 +252,7 @@ export const fileAPI = {
       console.log("Prepared file data:", {
         ...fileData,
         encrypted_file_key: {
-          ciphertext_length: encryptedFileKey.length,
+          ciphertext_length: encryptedFileKeyCiphertext.length,
           nonce_length: keyNonce.length,
         },
       });
@@ -299,21 +304,48 @@ export const fileAPI = {
 
       // Step 1: Get the file metadata
       console.log("Retrieving file metadata...");
-      const file = await fileAPI.getFile(fileId);
-      console.log("File metadata retrieved:", {
-        ...file,
-        encrypted_file_key: file.encrypted_file_key
-          ? {
-              ciphertext_length: file.encrypted_file_key.ciphertext?.length,
-              nonce_length: file.encrypted_file_key.nonce?.length,
-            }
-          : null,
-      });
+      const file = await fileAPI.getFile(fileId); // getFile now logs its response
+      // console.log("File metadata retrieved for decryption:", JSON.stringify(file, null, 2)); // This log is now inside getFile
 
       // Step 2: Check if we have the necessary encryption data
-      if (!file || !file.encrypted_file_key) {
+      if (!file) {
+        throw new Error("File metadata could not be retrieved (null).");
+      }
+      if (!file.encrypted_file_key) {
+        console.error(
+          "file.encrypted_file_key is missing. Full file object from getFile:",
+          file,
+        );
         throw new Error(
-          "File metadata is incomplete or missing encryption data",
+          "File metadata is missing 'encrypted_file_key'. Check API response for GET /files/{file_id}.",
+        );
+      }
+      if (
+        typeof file.encrypted_file_key.ciphertext !== "string" ||
+        file.encrypted_file_key.ciphertext.length === 0
+      ) {
+        console.error(
+          "'encrypted_file_key.ciphertext' is not a non-empty string. Received:",
+          file.encrypted_file_key.ciphertext,
+          ". Full encrypted_file_key object:",
+          file.encrypted_file_key,
+        );
+        throw new Error(
+          "File metadata's 'encrypted_file_key.ciphertext' is missing, empty, or not a string.",
+        );
+      }
+      if (
+        typeof file.encrypted_file_key.nonce !== "string" ||
+        file.encrypted_file_key.nonce.length === 0
+      ) {
+        console.error(
+          "'encrypted_file_key.nonce' is not a non-empty string. Received:",
+          file.encrypted_file_key.nonce,
+          ". Full encrypted_file_key object:",
+          file.encrypted_file_key,
+        );
+        throw new Error(
+          "File metadata's 'encrypted_file_key.nonce' is missing, empty, or not a string.",
         );
       }
 
@@ -322,15 +354,19 @@ export const fileAPI = {
       const masterKey = await cryptoUtils.deriveKey(password);
 
       // Step 4: Decrypt the file key using the master key
-      console.log("Decrypting file key...");
-      const encryptedFileKey = new Uint8Array(
+      console.log(
+        "Decrypting file key (ciphertext and nonce should be base64 strings)...",
+      );
+      const encryptedFileKeyBytes = await cryptoUtils.fromBase64(
         file.encrypted_file_key.ciphertext,
       );
-      const keyNonce = new Uint8Array(file.encrypted_file_key.nonce);
+      const keyNonceBytes = await cryptoUtils.fromBase64(
+        file.encrypted_file_key.nonce,
+      );
 
       const fileKey = await cryptoUtils.decrypt(
-        encryptedFileKey,
-        keyNonce,
+        encryptedFileKeyBytes,
+        keyNonceBytes,
         masterKey,
       );
       console.log("File key decrypted successfully:", fileKey.length, "bytes");
@@ -347,7 +383,7 @@ export const fileAPI = {
       const encryptedData = new Uint8Array(await encryptedBlob.arrayBuffer());
 
       // Step 6: Split the nonce and ciphertext
-      console.log("Separating nonce and ciphertext...");
+      console.log("Separating nonce and ciphertext from downloaded content...");
       const { nonce: contentNonce, ciphertext } =
         await cryptoUtils.splitFromStorage(encryptedData);
 
@@ -361,10 +397,10 @@ export const fileAPI = {
       console.log("File content decrypted:", decryptedContent.length, "bytes");
 
       // Step 8: Decrypt the metadata to get file name and type
-      console.log("Decrypting file metadata...");
+      console.log("Decrypting file metadata from file object...");
       let metadata = {
-        name: `file_${fileId.slice(-6)}`,
-        type: "application/octet-stream",
+        name: `file_${fileId.slice(-6)}`, // Default name
+        type: "application/octet-stream", // Default type
       };
 
       if (file.encrypted_metadata) {
@@ -403,7 +439,7 @@ export const fileAPI = {
 
       const a = document.createElement("a");
       a.href = url;
-      a.download = metadata.name || `file_${fileId.slice(-6)}`;
+      a.download = metadata.name || `file_${fileId.slice(-6)}`; // Use decrypted name or default
       document.body.appendChild(a);
       a.click();
 

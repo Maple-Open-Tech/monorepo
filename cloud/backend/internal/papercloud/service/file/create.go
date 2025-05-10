@@ -95,9 +95,9 @@ func (svc *createFileServiceImpl) Execute(sessCtx context.Context, req *CreateFi
 	if req.EncryptionVersion == "" {
 		e["encryption_version"] = "Encryption version is required"
 	}
-	if req.EncryptedHash == "" {
-		e["encrypted_hash"] = "Encrypted hash is required"
-	}
+	// if req.EncryptedHash == "" {
+	// 	e["encrypted_hash"] = "Encrypted hash is required"
+	// }
 
 	if len(e) != 0 {
 		svc.logger.Warn("Failed validation",
@@ -169,10 +169,10 @@ func (svc *createFileServiceImpl) Execute(sessCtx context.Context, req *CreateFi
 		EncryptedMetadata:     req.EncryptedMetadata,
 		EncryptedFileKey:      req.EncryptedFileKey,
 		EncryptionVersion:     req.EncryptionVersion,
-		EncryptedHash:         req.EncryptedHash,
-		EncryptedThumbnail:    req.EncryptedThumbnail,
-		CreatedAt:             now,
-		ModifiedAt:            now,
+		// EncryptedHash:         req.EncryptedHash,
+		EncryptedThumbnail: req.EncryptedThumbnail,
+		CreatedAt:          now,
+		ModifiedAt:         now,
 	}
 
 	//

@@ -51,70 +51,43 @@ function CollectionFileListPage() {
     }
   };
 
-  const handleFileUpload = async (file, collectionId) => {
-    try {
-      setUploading(true);
-      // Use a master password (in production would be stored securely)
-      const masterPassword = "secure-master-password";
-
-      // Upload with proper E2EE
-      const result = await fileAPI.uploadFile(
-        file,
-        collectionId,
-        masterPassword,
-      );
-      console.log("Upload successful:", result);
-
-      // Store key hashes in local storage for verification during download
-      // (in production, use a secure storage method)
-      localStorage.setItem(
-        `collection_${collectionId}_key_hash`,
-        result._collectionKeyHash,
-      );
-      localStorage.setItem(`master_key_hash`, result._masterKeyHash);
-
-      setUploading(false);
-      return result;
-    } catch (error) {
-      setUploading(false);
-      console.error("Upload failed:", error);
-      alert("Upload failed: " + error.message);
-    }
-  };
-
   const handleDownloadFile = async (fileId) => {
     try {
       setDownloadingFile(fileId);
 
-      // Try to get the password from localStorage
+      // Try with the saved password first
       const savedPassword = localStorage.getItem(`file_${fileId}_password`);
 
       if (savedPassword) {
-        console.log(`Found saved password for file ${fileId}`);
+        console.log(`Found saved password for file ${fileId}:`, savedPassword);
         try {
           await fileAPI.downloadFile(fileId, savedPassword);
           setDownloadingFile(null);
           return;
-        } catch (decryptErr) {
-          console.error("Decryption with saved password failed:", decryptErr);
-          // Continue to fallback below
+        } catch (savedErr) {
+          console.error("Failed to decrypt with saved password:", savedErr);
+          // Continue to next attempt
         }
+      } else {
+        console.log("No saved password found for file", fileId);
       }
 
-      // If no saved password or decryption failed, try with a default password
+      // Try with the default test password
+      console.log("Trying with default test password...");
       try {
         const defaultPassword = "test-password-123";
-        console.log("Trying with default password...");
         await fileAPI.downloadFile(fileId, defaultPassword);
         setDownloadingFile(null);
         return;
       } catch (defaultErr) {
-        console.error("Decryption with default password failed:", defaultErr);
+        console.error("Failed to decrypt with default password:", defaultErr);
         // Continue to fallback
       }
 
-      // Fallback: Just download the raw encrypted data
-      console.log("Falling back to raw encrypted download...");
+      // Fallback: download raw encrypted file
+      console.log(
+        "All decryption attempts failed, downloading raw encrypted file",
+      );
       const encryptedBlob = await fileAPI.getEncryptedFileData(fileId);
 
       const url = URL.createObjectURL(encryptedBlob);

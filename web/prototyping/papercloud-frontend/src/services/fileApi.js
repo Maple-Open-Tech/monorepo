@@ -2,119 +2,92 @@
 import { paperCloudApi } from "./apiConfig";
 import _sodium from "libsodium-wrappers";
 
-// Helper function to encrypt file data
-const encryptFileData = async (fileData, collectionKey) => {
-  try {
+// Create a namespace for our crypto functions to keep them organized
+const cryptoUtils = {
+  // Generate a deterministic key from a password and salt
+  deriveKey: async (password, salt = "fixed-salt-for-testing") => {
     await _sodium.ready;
     const sodium = _sodium;
 
-    // Generate a new file key
-    const fileKey = sodium.randombytes_buf(32);
+    // Convert password to bytes
+    const passwordBytes =
+      typeof password === "string" ? sodium.from_string(password) : password;
 
-    // Encrypt file key with collection key
+    // Use a simple key derivation for testing
+    // In production, you'd use sodium.crypto_pwhash with proper parameters
+    const context = typeof salt === "string" ? sodium.from_string(salt) : salt;
+    return sodium.crypto_generichash(32, passwordBytes, context);
+  },
+
+  // Encrypt data with a key
+  encrypt: async (data, key) => {
+    await _sodium.ready;
+    const sodium = _sodium;
+
+    // Generate nonce
     const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-    const encryptedFileKey = sodium.crypto_secretbox_easy(
-      fileKey,
-      nonce,
-      collectionKey,
-    );
 
-    // Encrypt file metadata
-    const metadataNonce = sodium.randombytes_buf(
-      sodium.crypto_secretbox_NONCEBYTES,
-    );
-    const encryptedMetadata = sodium.crypto_secretbox_easy(
-      sodium.from_string(JSON.stringify(fileData.metadata || {})),
-      metadataNonce,
-      fileKey,
-    );
+    // Encrypt
+    const ciphertext = sodium.crypto_secretbox_easy(data, nonce, key);
 
-    // Return the encrypted file data
+    // Return both nonce and ciphertext
     return {
-      collection_id: fileData.collectionId,
-      file_id: fileData.fileId || sodium.to_base64(sodium.randombytes_buf(16)),
-      encrypted_size: fileData.size || 0,
-      encrypted_original_size: fileData.originalSize || "0",
-      encrypted_metadata: sodium.to_base64(
-        new Uint8Array([...metadataNonce, ...encryptedMetadata]),
-      ),
-      encrypted_file_key: {
-        ciphertext: Array.from(encryptedFileKey),
-        nonce: Array.from(nonce),
-      },
-      encryption_version: "1.0",
-      encrypted_hash: fileData.hash || "",
-      encrypted_thumbnail: fileData.thumbnail || "",
+      nonce,
+      ciphertext,
     };
-  } catch (error) {
-    console.error("Encryption error:", error);
-    throw new Error(`Failed to encrypt file data: ${error.message}`);
-  }
-};
+  },
 
-// Helper function to decrypt file metadata
-// Enhanced decryptFileMetadata function
-const decryptFileMetadata = async (file, fileKey) => {
-  try {
+  // Decrypt data with a key
+  decrypt: async (ciphertext, nonce, key) => {
     await _sodium.ready;
     const sodium = _sodium;
 
-    console.log("Decrypting metadata with key length:", fileKey.length);
-    console.log("Encrypted metadata:", file.encrypted_metadata);
+    // Decrypt
+    return sodium.crypto_secretbox_open_easy(ciphertext, nonce, key);
+  },
 
-    if (!file.encrypted_metadata) {
-      return { name: "unknown_file", type: "application/octet-stream" };
-    }
+  // Combine nonce and ciphertext for storage
+  combineForStorage: (nonce, ciphertext) => {
+    const combined = new Uint8Array(nonce.length + ciphertext.length);
+    combined.set(nonce, 0);
+    combined.set(ciphertext, nonce.length);
+    return combined;
+  },
 
-    // Extract and decode the base64 encrypted metadata
-    let encryptedMetadataBytes;
-    if (typeof file.encrypted_metadata === "string") {
-      encryptedMetadataBytes = sodium.from_base64(file.encrypted_metadata);
-    } else if (file.encrypted_metadata instanceof Uint8Array) {
-      encryptedMetadataBytes = file.encrypted_metadata;
-    } else {
-      throw new Error("Unsupported encrypted_metadata format");
-    }
+  // Split combined data back into nonce and ciphertext
+  splitFromStorage: async (combined) => {
+    await _sodium.ready;
+    const sodium = _sodium;
 
-    console.log(
-      "Decoded metadata bytes length:",
-      encryptedMetadataBytes.length,
-    );
-
-    // Split the nonce and ciphertext - first 24 bytes are the nonce
-    const metadataNonce = encryptedMetadataBytes.slice(
-      0,
-      sodium.crypto_secretbox_NONCEBYTES,
-    );
-    const metadataCiphertext = encryptedMetadataBytes.slice(
-      sodium.crypto_secretbox_NONCEBYTES,
-    );
-
-    console.log("Metadata components:", {
-      nonceLength: metadataNonce.length,
-      ciphertextLength: metadataCiphertext.length,
-    });
-
-    // Decrypt the metadata
-    const decryptedMetadata = sodium.crypto_secretbox_open_easy(
-      metadataCiphertext,
-      metadataNonce,
-      fileKey,
-    );
-
-    // Parse the JSON metadata
-    const metadataText = sodium.to_string(decryptedMetadata);
-    console.log("Decrypted metadata text:", metadataText);
-    return JSON.parse(metadataText);
-  } catch (error) {
-    console.error("Metadata decryption error:", error);
-    // Return fallback metadata
+    const nonceLength = sodium.crypto_secretbox_NONCEBYTES;
     return {
-      name: `file_${file.id.slice(-6)}`,
-      type: "application/octet-stream",
-      decryption_error: error.message,
+      nonce: combined.slice(0, nonceLength),
+      ciphertext: combined.slice(nonceLength),
     };
-  }
+  },
+
+  // Convert to/from various formats
+  toBase64: async (bytes) => {
+    await _sodium.ready;
+    return _sodium.to_base64(bytes);
+  },
+
+  fromBase64: async (base64) => {
+    await _sodium.ready;
+    return _sodium.from_base64(base64);
+  },
+
+  // Object to Uint8Array
+  stringToBytes: async (str) => {
+    await _sodium.ready;
+    return _sodium.from_string(str);
+  },
+
+  // Uint8Array to string
+  bytesToString: async (bytes) => {
+    await _sodium.ready;
+    return _sodium.to_string(bytes);
+  },
 };
 
 // File API functions
@@ -139,21 +112,6 @@ export const fileAPI = {
       return response.data;
     } catch (error) {
       console.error("Error getting file:", error);
-      throw error;
-    }
-  },
-
-  // Create a new file
-  createFile: async (fileData, collectionKey) => {
-    try {
-      // Encrypt the file data
-      const encryptedData = await encryptFileData(fileData, collectionKey);
-
-      // Send the encrypted data to the server
-      const response = await paperCloudApi.post("/files", encryptedData);
-      return response.data;
-    } catch (error) {
-      console.error("Error creating file:", error);
       throw error;
     }
   },
@@ -203,68 +161,6 @@ export const fileAPI = {
     }
   },
 
-  // Update an existing file
-  updateFile: async (fileId, updates, collectionKey) => {
-    try {
-      // Prepare the update data
-      const updateData = {
-        id: fileId,
-      };
-
-      // If metadata is provided, encrypt it
-      if (updates.metadata) {
-        await _sodium.ready;
-        const sodium = _sodium;
-
-        // Get the current file to access the file key
-        const currentFile = await fileAPI.getFile(fileId);
-
-        // In a real implementation, you would decrypt the file key using the collection key
-        // This is a simplified approach
-        const encryptedFileKey = new Uint8Array(
-          currentFile.encrypted_file_key.ciphertext,
-        );
-        const keyNonce = new Uint8Array(currentFile.encrypted_file_key.nonce);
-        const fileKey = sodium.crypto_secretbox_open_easy(
-          encryptedFileKey,
-          keyNonce,
-          collectionKey,
-        );
-
-        // Encrypt the updated metadata
-        const metadataNonce = sodium.randombytes_buf(
-          sodium.crypto_secretbox_NONCEBYTES,
-        );
-        const encryptedMetadata = sodium.crypto_secretbox_easy(
-          sodium.from_string(JSON.stringify(updates.metadata)),
-          metadataNonce,
-          fileKey,
-        );
-
-        updateData.encrypted_metadata = sodium.to_base64(
-          new Uint8Array([...metadataNonce, ...encryptedMetadata]),
-        );
-      }
-
-      // If thumbnail is provided, update it
-      if (updates.thumbnail) {
-        updateData.encrypted_thumbnail = updates.thumbnail;
-      }
-
-      // If file key is provided, update it
-      if (updates.fileKey) {
-        updateData.encrypted_file_key = updates.fileKey;
-      }
-
-      // Send the update to the server
-      const response = await paperCloudApi.put(`/files/${fileId}`, updateData);
-      return response.data;
-    } catch (error) {
-      console.error("Error updating file:", error);
-      throw error;
-    }
-  },
-
   // Delete a file
   deleteFile: async (fileId) => {
     try {
@@ -277,61 +173,41 @@ export const fileAPI = {
   },
 
   // Upload a file (encrypts the file and creates the file record)
-  // Update the file upload function to use proper key management
-  // Simplified upload function for testing
-  uploadFile: async (file, collectionId, masterPassword) => {
+  uploadFile: async (file, collectionId, password) => {
     try {
       await _sodium.ready;
       const sodium = _sodium;
 
-      console.log("Starting file upload with proper E2EE...");
-      console.log("Master password:", masterPassword);
+      console.log("Starting simplified E2EE file upload...");
 
-      // Convert password to bytes if it's a string
-      const passwordBytes =
-        typeof masterPassword === "string"
-          ? sodium.from_string(masterPassword)
-          : masterPassword;
+      // Step 1: Log the password we're using
+      console.log("Using password:", password);
 
-      // Generate a simple key for testing
-      console.log("Generating a simple key for testing...");
-      const masterKey = sodium.crypto_generichash(32, passwordBytes);
-      console.log("Master key generated:", masterKey.length, "bytes");
-
-      // Read the file as an ArrayBuffer
+      // Step 2: Read the file as an ArrayBuffer
+      console.log("Reading file:", file.name, file.size, "bytes");
       const fileContent = await file.arrayBuffer();
       const fileContentUint8 = new Uint8Array(fileContent);
 
-      // Generate a file key
+      // Step 3: Create a file key to encrypt the content
+      console.log("Generating file encryption key...");
       const fileKey = sodium.randombytes_buf(32);
-      console.log("File key generated:", fileKey.length, "bytes");
 
-      // Encrypt file key with master key (skipping collection key for simplicity)
-      const keyNonce = sodium.randombytes_buf(
-        sodium.crypto_secretbox_NONCEBYTES,
-      );
-      const encryptedFileKey = sodium.crypto_secretbox_easy(
-        fileKey,
-        keyNonce,
-        masterKey,
-      );
+      // Step 4: Derive master key from password
+      console.log("Deriving master key from password...");
+      const masterKey = await cryptoUtils.deriveKey(password);
 
-      // Encrypt file content with file key
-      const contentNonce = sodium.randombytes_buf(
-        sodium.crypto_secretbox_NONCEBYTES,
-      );
-      const encryptedContent = sodium.crypto_secretbox_easy(
-        fileContentUint8,
-        contentNonce,
-        fileKey,
-      );
+      // Step 5: Encrypt the file key with the master key
+      console.log("Encrypting file key with master key...");
+      const { nonce: keyNonce, ciphertext: encryptedFileKey } =
+        await cryptoUtils.encrypt(fileKey, masterKey);
 
-      // Calculate hash of original file
-      const hash = sodium.to_base64(
-        sodium.crypto_generichash(32, fileContentUint8),
-      );
+      // Step 6: Encrypt the file content with the file key
+      console.log("Encrypting file content...");
+      const { nonce: contentNonce, ciphertext: encryptedContent } =
+        await cryptoUtils.encrypt(fileContentUint8, fileKey);
 
-      // Prepare file metadata
+      // Step 7: Prepare metadata
+      console.log("Preparing and encrypting metadata...");
       const metadata = {
         name: file.name,
         type: file.type,
@@ -339,53 +215,69 @@ export const fileAPI = {
         size: file.size,
       };
 
-      // Encrypt metadata
-      const metadataNonce = sodium.randombytes_buf(
-        sodium.crypto_secretbox_NONCEBYTES,
+      // Step 8: Encrypt metadata
+      const metadataBytes = await cryptoUtils.stringToBytes(
+        JSON.stringify(metadata),
       );
-      const encryptedMetadata = sodium.crypto_secretbox_easy(
-        sodium.from_string(JSON.stringify(metadata)),
-        metadataNonce,
-        fileKey,
-      );
+      const { nonce: metadataNonce, ciphertext: encryptedMetadata } =
+        await cryptoUtils.encrypt(metadataBytes, fileKey);
 
-      // Create file record in database with simplified structure
+      // Step 9: Combine metadata nonce and ciphertext for storage
+      const combinedMetadata = cryptoUtils.combineForStorage(
+        metadataNonce,
+        encryptedMetadata,
+      );
+      const base64Metadata = await cryptoUtils.toBase64(combinedMetadata);
+
+      // Step 10: Create the file data structure
       const fileData = {
         collection_id: collectionId,
-        file_id: sodium.to_base64(sodium.randombytes_buf(16)),
-        encrypted_size: encryptedContent.length,
+        file_id: await cryptoUtils.toBase64(sodium.randombytes_buf(16)),
+        encrypted_size: encryptedContent.length + contentNonce.length,
         encrypted_original_size: String(file.size),
-        encrypted_metadata: sodium.to_base64(
-          new Uint8Array([...metadataNonce, ...encryptedMetadata]),
-        ),
+        encrypted_metadata: base64Metadata,
+        // Store file key encrypted with master key
         encrypted_file_key: {
           ciphertext: Array.from(encryptedFileKey),
           nonce: Array.from(keyNonce),
         },
         encryption_version: "1.0",
-        encrypted_hash: hash,
       };
 
-      // Step A: Create file metadata record in database
-      console.log("Creating file metadata in database...");
+      console.log("Prepared file data:", {
+        ...fileData,
+        encrypted_file_key: {
+          ciphertext_length: encryptedFileKey.length,
+          nonce_length: keyNonce.length,
+        },
+      });
+
+      // Step 11: Create file metadata record in database
+      console.log("Creating file record in database...");
       const response = await paperCloudApi.post("/files", fileData);
       const createdFile = response.data;
+      console.log("File record created:", createdFile);
 
-      // Step B: Upload the actual encrypted file content
-      console.log("Uploading encrypted file content...");
-      const fileToUpload = new Uint8Array(
-        contentNonce.length + encryptedContent.length,
+      // Step 12: Combine content nonce and encrypted content for storage
+      console.log("Combining nonce and content for storage...");
+      const fileToUpload = cryptoUtils.combineForStorage(
+        contentNonce,
+        encryptedContent,
       );
-      fileToUpload.set(contentNonce, 0);
-      fileToUpload.set(encryptedContent, contentNonce.length);
 
-      // Upload the encrypted file content
+      // Step 13: Upload the encrypted file content
       try {
         console.log(
-          `Uploading encrypted file content (${fileToUpload.length} bytes)...`,
+          `Uploading encrypted file (${fileToUpload.length} bytes)...`,
         );
         await fileAPI.storeEncryptedFileData(createdFile.id, fileToUpload);
         console.log(`File ${createdFile.id} uploaded successfully!`);
+
+        // Step 14: Save the password for this file (only for testing!)
+        localStorage.setItem(`file_${createdFile.id}_password`, password);
+        console.log(`Password saved for file ${createdFile.id}`);
+
+        return createdFile;
       } catch (uploadError) {
         console.error("Failed to upload file content:", uploadError);
         await paperCloudApi.delete(`/files/${createdFile.id}`);
@@ -393,11 +285,6 @@ export const fileAPI = {
           `Failed to upload file content: ${uploadError.message}`,
         );
       }
-
-      // Store the password in localStorage for testing (not secure!)
-      localStorage.setItem(`file_${createdFile.id}_password`, masterPassword);
-
-      return createdFile;
     } catch (error) {
       console.error("File upload error:", error);
       throw new Error(`Failed to upload file: ${error.message}`);
@@ -405,105 +292,100 @@ export const fileAPI = {
   },
 
   // Download a file (retrieves and decrypts file content)
-  // Updated downloadFile function for fileApi.js
-  // Simplified download function for testing
-  downloadFile: async (fileId, masterPassword) => {
+  downloadFile: async (fileId, password) => {
     try {
       console.log(`Starting E2EE download for file ${fileId}`);
-      console.log("Master password:", masterPassword);
+      console.log("Using password:", password);
 
-      // Get the file metadata
+      // Step 1: Get the file metadata
+      console.log("Retrieving file metadata...");
       const file = await fileAPI.getFile(fileId);
-      console.log("File metadata received:", file);
+      console.log("File metadata retrieved:", {
+        ...file,
+        encrypted_file_key: file.encrypted_file_key
+          ? {
+              ciphertext_length: file.encrypted_file_key.ciphertext?.length,
+              nonce_length: file.encrypted_file_key.nonce?.length,
+            }
+          : null,
+      });
 
-      // Check if we have the necessary encryption data
+      // Step 2: Check if we have the necessary encryption data
       if (!file || !file.encrypted_file_key) {
         throw new Error(
           "File metadata is incomplete or missing encryption data",
         );
       }
 
-      // Get the encrypted file data
-      const encryptedBlob = await fileAPI.getEncryptedFileData(fileId);
-      console.log(`Received encrypted data: ${encryptedBlob.size} bytes`);
-      const encryptedData = new Uint8Array(await encryptedBlob.arrayBuffer());
+      // Step 3: Derive the master key from the password
+      console.log("Deriving master key from password...");
+      const masterKey = await cryptoUtils.deriveKey(password);
 
-      await _sodium.ready;
-      const sodium = _sodium;
-
-      // Convert password to bytes if it's a string
-      const passwordBytes =
-        typeof masterPassword === "string"
-          ? sodium.from_string(masterPassword)
-          : masterPassword;
-
-      // Generate the same master key as during upload
-      const masterKey = sodium.crypto_generichash(32, passwordBytes);
-      console.log("Master key regenerated:", masterKey.length, "bytes");
-
-      // Decrypt the file key
+      // Step 4: Decrypt the file key using the master key
+      console.log("Decrypting file key...");
       const encryptedFileKey = new Uint8Array(
         file.encrypted_file_key.ciphertext,
       );
       const keyNonce = new Uint8Array(file.encrypted_file_key.nonce);
 
-      console.log("Decrypting file key...");
-      const fileKey = sodium.crypto_secretbox_open_easy(
+      const fileKey = await cryptoUtils.decrypt(
         encryptedFileKey,
         keyNonce,
         masterKey,
       );
       console.log("File key decrypted successfully:", fileKey.length, "bytes");
 
-      // Extract the nonce and ciphertext from the encrypted data
-      const contentNonce = encryptedData.slice(
-        0,
-        sodium.crypto_secretbox_NONCEBYTES,
-      );
-      const ciphertext = encryptedData.slice(
-        sodium.crypto_secretbox_NONCEBYTES,
+      // Step 5: Get the encrypted file data
+      console.log("Retrieving encrypted file data...");
+      const encryptedBlob = await fileAPI.getEncryptedFileData(fileId);
+      console.log(
+        "Encrypted file data retrieved:",
+        encryptedBlob.size,
+        "bytes",
       );
 
+      const encryptedData = new Uint8Array(await encryptedBlob.arrayBuffer());
+
+      // Step 6: Split the nonce and ciphertext
+      console.log("Separating nonce and ciphertext...");
+      const { nonce: contentNonce, ciphertext } =
+        await cryptoUtils.splitFromStorage(encryptedData);
+
+      // Step 7: Decrypt the file content
       console.log("Decrypting file content...");
-      const decryptedContent = sodium.crypto_secretbox_open_easy(
+      const decryptedContent = await cryptoUtils.decrypt(
         ciphertext,
         contentNonce,
         fileKey,
       );
-      console.log(
-        "File content decrypted successfully:",
-        decryptedContent.length,
-        "bytes",
-      );
+      console.log("File content decrypted:", decryptedContent.length, "bytes");
 
-      // Decrypt metadata
+      // Step 8: Decrypt the metadata to get file name and type
+      console.log("Decrypting file metadata...");
       let metadata = {
-        name: "downloaded_file",
+        name: `file_${fileId.slice(-6)}`,
         type: "application/octet-stream",
       };
 
       if (file.encrypted_metadata) {
         try {
-          console.log("Decrypting file metadata...");
-          const encryptedMetadataBytes = sodium.from_base64(
+          const encryptedMetadataBytes = await cryptoUtils.fromBase64(
             file.encrypted_metadata,
           );
-          const metadataNonce = encryptedMetadataBytes.slice(
-            0,
-            sodium.crypto_secretbox_NONCEBYTES,
-          );
-          const metadataCiphertext = encryptedMetadataBytes.slice(
-            sodium.crypto_secretbox_NONCEBYTES,
-          );
+          const { nonce: metadataNonce, ciphertext: metadataCiphertext } =
+            await cryptoUtils.splitFromStorage(encryptedMetadataBytes);
 
-          const decryptedMetadata = sodium.crypto_secretbox_open_easy(
+          const decryptedMetadataBytes = await cryptoUtils.decrypt(
             metadataCiphertext,
             metadataNonce,
             fileKey,
           );
 
-          metadata = JSON.parse(sodium.to_string(decryptedMetadata));
-          console.log("File metadata decrypted successfully:", metadata);
+          const metadataString = await cryptoUtils.bytesToString(
+            decryptedMetadataBytes,
+          );
+          metadata = JSON.parse(metadataString);
+          console.log("File metadata decrypted:", metadata);
         } catch (metadataErr) {
           console.warn(
             "Failed to decrypt metadata, using defaults:",
@@ -512,8 +394,8 @@ export const fileAPI = {
         }
       }
 
-      // Create a download blob and trigger download
-      console.log("Creating download...");
+      // Step 9: Create a download blob and trigger download
+      console.log("Creating download with type:", metadata.type);
       const blob = new Blob([decryptedContent], {
         type: metadata.type || "application/octet-stream",
       });
@@ -531,96 +413,16 @@ export const fileAPI = {
         URL.revokeObjectURL(url);
       }, 100);
 
+      console.log("Download complete!");
       return {
         success: true,
         metadata,
-        originalSize: decryptedContent.length,
       };
     } catch (error) {
       console.error("File download error:", error);
       throw new Error(`Failed to download file: ${error.message}`);
     }
   },
-
-  // Decrypt the file metadata to display in UI
-  decryptFileMetadata: async (file, collectionKey) => {
-    try {
-      await _sodium.ready;
-      const sodium = _sodium;
-
-      // First decrypt the file key
-      const encryptedFileKey = new Uint8Array(
-        file.encrypted_file_key.ciphertext,
-      );
-      const keyNonce = new Uint8Array(file.encrypted_file_key.nonce);
-      const fileKey = sodium.crypto_secretbox_open_easy(
-        encryptedFileKey,
-        keyNonce,
-        collectionKey,
-      );
-
-      // Then decrypt the metadata
-      return await decryptFileMetadata(file, fileKey);
-    } catch (error) {
-      console.error("Error decrypting file metadata:", error);
-      return { name: "Encrypted File", type: "unknown" };
-    }
-  },
-};
-
-// Proper password-based key derivation using libsodium (similar to Argon2id in Ente.io)
-// Fixed master key derivation function
-const deriveMasterKey = async (password, salt) => {
-  await _sodium.ready;
-  const sodium = _sodium;
-
-  // Convert password to Uint8Array if it's a string
-  const passwordBytes =
-    typeof password === "string" ? sodium.from_string(password) : password;
-
-  // Use a hardcoded salt size of 16 bytes (standard for Argon2id)
-  const SALT_BYTES = 16;
-
-  // If no salt provided, generate one (needed for first-time derivation)
-  if (!salt) {
-    console.log("Generating new salt...");
-    salt = sodium.randombytes_buf(SALT_BYTES);
-  } else if (typeof salt === "string") {
-    // Convert hex or base64 string to Uint8Array if needed
-    console.log("Converting string salt to bytes...");
-    salt = sodium.from_base64(salt);
-  }
-
-  console.log("Salt size:", salt.length, "bytes");
-
-  // Use proper key derivation with Argon2id
-  console.log("Deriving key with Argon2id...");
-  const key = sodium.crypto_pwhash(
-    32, // key length
-    passwordBytes,
-    salt,
-    3, // operations limit (lower for testing)
-    16777216, // memory limit: 16 MB
-    sodium.crypto_pwhash_ALG_DEFAULT,
-  );
-
-  console.log("Key derived successfully:", key.length, "bytes");
-  return { key, salt };
-};
-
-// Generate or retrieve a collection key
-const getCollectionKey = async (collectionId, masterKey) => {
-  await _sodium.ready;
-  const sodium = _sodium;
-
-  // In a real implementation, you would:
-  // 1. Retrieve the encrypted collection key from the database
-  // 2. Decrypt it using the master key
-
-  // For this implementation, we'll create a deterministic collection key
-  // based on collection ID and master key (not as secure as a random key)
-  const collectionData = sodium.from_string(`collection:${collectionId}`);
-  return sodium.crypto_generichash(32, collectionData, masterKey);
 };
 
 export default fileAPI;

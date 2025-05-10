@@ -5,6 +5,7 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/papercloud/service/collection"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/papercloud/service/file"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/papercloud/service/me"
 )
 
@@ -23,6 +24,13 @@ func Module() fx.Option {
 			collection.NewListUserCollectionsService,
 			collection.NewUpdateCollectionService,
 			collection.NewDeleteCollectionService,
+
+			// File services
+			file.NewCreateFileService,
+			file.NewGetFileService,
+			file.NewUpdateFileService,
+			file.NewDeleteFileService,
+			file.NewListFilesByCollectionService,
 		),
 	)
 }

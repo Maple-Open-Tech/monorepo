@@ -7,6 +7,7 @@ import (
 	unifiedhttp "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/manifold/interface/http"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/papercloud/interface/http/collection"
 	commonhttp "github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/papercloud/interface/http/common"
+	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/papercloud/interface/http/file"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/papercloud/interface/http/me"
 	"github.com/Maple-Open-Tech/monorepo/cloud/backend/internal/papercloud/interface/http/middleware"
 )
@@ -31,6 +32,13 @@ func Module() fx.Option {
 			unifiedhttp.AsRoute(collection.NewListUserCollectionsHTTPHandler),
 			unifiedhttp.AsRoute(collection.NewUpdateCollectionHTTPHandler),
 			unifiedhttp.AsRoute(collection.NewDeleteCollectionHTTPHandler),
+
+			// File handlers
+			unifiedhttp.AsRoute(file.NewCreateFileHTTPHandler),
+			unifiedhttp.AsRoute(file.NewGetFileHTTPHandler),
+			unifiedhttp.AsRoute(file.NewUpdateFileHTTPHandler),
+			unifiedhttp.AsRoute(file.NewDeleteFileHTTPHandler),
+			unifiedhttp.AsRoute(file.NewListFilesByCollectionHTTPHandler),
 		),
 	)
 }

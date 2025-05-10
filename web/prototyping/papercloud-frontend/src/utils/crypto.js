@@ -1,5 +1,5 @@
 // src/utils/crypto.js
-import _sodium_original_module_name_to_avoid_global_conflicts from "libsodium-wrappers";
+import _sodium_original_module_name_to_avoid_global_conflicts from "libsodium-wrappers-sumo";
 
 let sodiumInstance = null;
 let sodiumReadyPromise = null; // To ensure .ready is called only once
@@ -61,9 +61,23 @@ export const cryptoUtils = {
   deriveKeyFromPassword: async (password, salt) => {
     const sodium = await ensureSodium();
 
-    // console.log('In deriveKeyFromPassword - sodium object available:', !!sodium);
-    // console.log('typeof sodium.crypto_pwhash:', typeof sodium.crypto_pwhash);
-    // console.log('Constants check: KEYBYTES', sodium.crypto_secretbox_KEYBYTES, 'SALTBYTES', sodium.crypto_pwhash_SALTBYTES, 'OPSLIMIT', sodium.crypto_pwhash_OPSLIMIT_INTERACTIVE, 'MEMLIMIT', sodium.crypto_pwhash_MEMLIMIT_INTERACTIVE, 'ALG_DEFAULT', sodium.crypto_pwhash_ALG_DEFAULT);
+    console.log(
+      "In deriveKeyFromPassword - sodium object available:",
+      !!sodium,
+    );
+    console.log("typeof sodium.crypto_pwhash:", typeof sodium.crypto_pwhash);
+    console.log(
+      "Constants check: KEYBYTES",
+      sodium.crypto_secretbox_KEYBYTES,
+      "SALTBYTES",
+      sodium.crypto_pwhash_SALTBYTES,
+      "OPSLIMIT",
+      sodium.crypto_pwhash_OPSLIMIT_INTERACTIVE,
+      "MEMLIMIT",
+      sodium.crypto_pwhash_MEMLIMIT_INTERACTIVE,
+      "ALG_DEFAULT",
+      sodium.crypto_pwhash_ALG_DEFAULT,
+    );
 
     if (typeof password !== "string" || password.length === 0) {
       throw new Error("Password must be a non-empty string.");

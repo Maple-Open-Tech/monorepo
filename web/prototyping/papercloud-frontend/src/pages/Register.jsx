@@ -2,8 +2,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import axios from "axios";
-import _sodium from "libsodium-wrappers";
+import _sodium from "libsodium-wrappers-sumo";
 import { authAPI } from "../services/api";
+import { cryptoUtils } from "../utils/crypto";
 
 function Register() {
   const navigate = useNavigate();
@@ -84,12 +85,11 @@ function Register() {
 
       // Derive key from password - for JavaScript we'll use a simpler approach with BLAKE2b
       const passwordBytes = sodium.from_string(formData.password);
-      const keyEncryptionKey = sodium.crypto_generichash(
-        32,
-        passwordBytes,
-        salt,
+      const keyEncryptionKey = await cryptoUtils.deriveKeyFromPassword(
+        formData.password, // Pass the string password
+        salt, // Pass the Uint8Array salt
       );
-      console.log("Key encryption key derived");
+      console.log("Key encryption key derived (using crypto_pwhash)");
 
       // Generate master key
       const masterKey = sodium.randombytes_buf(32);

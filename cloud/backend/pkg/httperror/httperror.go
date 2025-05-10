@@ -136,3 +136,11 @@ func ResponseError(rw http.ResponseWriter, err error) {
 
 	_ = json.NewEncoder(rw).Encode(err.Error())
 }
+
+// NewForInternalServerError create a new HTTPError instance pertaining to 500 internal server error with the multi-errors. This is a convinience constructor.
+func NewForInternalServerError(err string) error {
+	return HTTPError{
+		Code:   http.StatusInternalServerError,
+		Errors: &map[string]string{"message": err},
+	}
+}

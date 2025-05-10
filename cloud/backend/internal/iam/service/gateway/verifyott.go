@@ -154,6 +154,13 @@ func (s *gatewayVerifyLoginOTTServiceImpl) Execute(sessCtx context.Context, req 
 	// Generate a unique challenge ID
 	challengeID := uuid.New().String()
 
+	// Log the generated challenge details
+	s.logger.Info("VerifyOTT: Generated challenge for caching",
+		zap.String("challenge_id", challengeID),
+		zap.String("challenge_bytes_preview_base64_for_cache", challengeBase64),
+		zap.Int("challenge_bytes_length", len(challenge)),
+	)
+
 	// Store challenge in cache
 	challengeData := ChallengeData{
 		Email:           req.Email,
@@ -230,41 +237,26 @@ func (s *gatewayVerifyLoginOTTServiceImpl) Execute(sessCtx context.Context, req 
 	}, nil
 }
 
-// getEncryptedChallenge encrypts the challenge with the user's public key
-func getEncryptedChallenge(challenge []byte, user *domain.FederatedUser) (string, error) {
-	// The user.PublicKey.Key is already in binary format, no need to decode
+// getEncryptedChallenge encrypts the challenge using the user's public key
+// in a way that is compatible with libsodium's crypto_box_seal_open.
+func getEncryptedChallenge(challengeBytes []byte, user *domain.FederatedUser) (string, error) {
 	publicKeyBytes := user.PublicKey.Key
-
-	// Ensure we have the right length for NaCl box
-	if len(publicKeyBytes) != crypto.PublicKeySize {
-		return "", fmt.Errorf("invalid public key length: got %d, want %d",
-			len(publicKeyBytes), crypto.PublicKeySize)
+	if len(publicKeyBytes) != crypto.PublicKeySize { // crypto.PublicKeySize is 32
+		return "", fmt.Errorf("invalid public key length: got %d, want %d", len(publicKeyBytes), crypto.PublicKeySize)
 	}
 
-	// Generate a random nonce
-	var nonce [crypto.NonceSize]byte
-	if _, err := rand.Read(nonce[:]); err != nil {
-		return "", fmt.Errorf("failed to generate nonce: %w", err)
-	}
+	var userPubKeyFixed [crypto.PublicKeySize]byte
+	copy(userPubKeyFixed[:], publicKeyBytes)
 
-	// Create a ephemeral keypair for this encryption
-	ephemeralPub, ephemeralPriv, err := box.GenerateKey(rand.Reader)
+	// box.SealAnonymous handles ephemeral key generation, nonce derivation,
+	// encryption, and prepends the ephemeral public key to the output.
+	// rand.Reader is used for generating the ephemeral key pair.
+	sealedChallenge, err := box.SealAnonymous(nil, challengeBytes, &userPubKeyFixed, rand.Reader)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate ephemeral keypair: %w", err)
+		return "", fmt.Errorf("failed to seal challenge anonymously: %w", err)
 	}
 
-	// Convert the user's public key to the expected format
-	var userPubKey [crypto.PublicKeySize]byte
-	copy(userPubKey[:], publicKeyBytes)
-
-	// Encrypt the challenge with box.Seal using the user's public key
-	encrypted := box.Seal(nonce[:], challenge, &nonce, &userPubKey, ephemeralPriv)
-
-	// Prepend the ephemeral public key to the encrypted data
-	result := make([]byte, len(encrypted)+crypto.PublicKeySize)
-	copy(result[:crypto.PublicKeySize], ephemeralPub[:])
-	copy(result[crypto.PublicKeySize:], encrypted)
-
-	// Return base64 encoded result
-	return base64.StdEncoding.EncodeToString(result), nil
+	// The output of box.SealAnonymous is: ephemeral_public_key (32 bytes) || ciphertext (message + MAC)
+	// This is exactly what crypto_box_seal_open expects.
+	return base64.StdEncoding.EncodeToString(sealedChallenge), nil
 }

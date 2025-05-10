@@ -1,7 +1,7 @@
 // src/services/fileApi.js
 import { paperCloudApi } from "./apiConfig";
 import { cryptoUtils } from "../utils/crypto";
-import _sodium from "libsodium-wrappers"; // For sodium.randombytes_buf, ensure it's the initialized instance
+import _sodium from "libsodium-wrappers-sumo";
 
 // File API functions
 export const fileAPI = {

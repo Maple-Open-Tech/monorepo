@@ -119,11 +119,27 @@ function CompleteLogin() {
       );
       if (!decryptedChallengeBytes)
         throw new Error("Failed to decrypt server challenge.");
+
+      // ADD THESE LOGS:
+      console.log("CompleteLogin: Raw decryptedChallengeBytes:", decryptedChallengeBytes);
+      // If you suspect it might be text, you can try logging it as a string
+      try {
+        const decryptedChallengeString = await cryptoUtils.bytesToString(decryptedChallengeBytes);
+        console.log("CompleteLogin: Decrypted challenge as string:", decryptedChallengeString);
+      } catch (e) {
+        console.warn("CompleteLogin: Could not convert decrypted challenge to string", e);
+      }
+      // Also log its length
+      console.log("CompleteLogin: Decrypted challenge byte length:", decryptedChallengeBytes.length);
+      // END OF ADDED LOGS
+
       console.log("CompleteLogin: Server challenge decrypted.");
 
       const decryptedChallengeB64 = await cryptoUtils.toBase64(
         decryptedChallengeBytes,
       );
+      // Log the base64 version that will be sent
+      console.log("CompleteLogin: Decrypted challenge to be sent (Base64):", decryptedChallengeB64);
 
       // 5. Send to server to complete login
       const response = await authAPI.completeLogin(

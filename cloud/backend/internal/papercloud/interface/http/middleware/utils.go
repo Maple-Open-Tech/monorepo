@@ -20,9 +20,10 @@ var (
 func init() {
 	// Exact matches
 	exactPaths = map[string]bool{
-		"/papercloud/api/v1/me":        true,
-		"/papercloud/api/v1/me/delete": true,
-		"/papercloud/api/v1/dashboard": true,
+		"/papercloud/api/v1/me":          true,
+		"/papercloud/api/v1/me/delete":   true,
+		"/papercloud/api/v1/dashboard":   true,
+		"/papercloud/api/v1/collections": true,
 		//TODO: Collections
 		//TODO: Files
 	}
@@ -33,6 +34,7 @@ func init() {
 		// "^/papercloud/api/v1/wallet/[0-9a-f]+$",                 // Regex designed for mongodb ids.
 		// "^/papercloud/api/v1/public-wallets/0x[0-9a-fA-F]{40}$", // Regex designed for ethereum addresses.
 		// "^/papercloud/api/v1/users/[0-9a-f]+$",                  // Regex designed for mongodb ids.
+		"^/papercloud/api/v1/collections/[a-zA-Z0-9-]+$", // Regex designed for collection IDs
 		//TODO: Collections
 		//TODO: Files
 	}

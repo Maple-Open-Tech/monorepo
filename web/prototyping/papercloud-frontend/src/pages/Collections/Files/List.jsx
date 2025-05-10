@@ -12,6 +12,7 @@ function CollectionFileListPage() {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [downloadingFile, setDownloadingFile] = useState(null);
 
   useEffect(() => {
     const fetchCollectionAndFiles = async () => {
@@ -47,6 +48,96 @@ function CollectionFileListPage() {
     } catch (err) {
       console.error("Error deleting file:", err);
       alert("Failed to delete file");
+    }
+  };
+
+  const handleFileUpload = async (file, collectionId) => {
+    try {
+      setUploading(true);
+      // Use a master password (in production would be stored securely)
+      const masterPassword = "secure-master-password";
+
+      // Upload with proper E2EE
+      const result = await fileAPI.uploadFile(
+        file,
+        collectionId,
+        masterPassword,
+      );
+      console.log("Upload successful:", result);
+
+      // Store key hashes in local storage for verification during download
+      // (in production, use a secure storage method)
+      localStorage.setItem(
+        `collection_${collectionId}_key_hash`,
+        result._collectionKeyHash,
+      );
+      localStorage.setItem(`master_key_hash`, result._masterKeyHash);
+
+      setUploading(false);
+      return result;
+    } catch (error) {
+      setUploading(false);
+      console.error("Upload failed:", error);
+      alert("Upload failed: " + error.message);
+    }
+  };
+
+  const handleDownloadFile = async (fileId) => {
+    try {
+      setDownloadingFile(fileId);
+
+      // Try to get the password from localStorage
+      const savedPassword = localStorage.getItem(`file_${fileId}_password`);
+
+      if (savedPassword) {
+        console.log(`Found saved password for file ${fileId}`);
+        try {
+          await fileAPI.downloadFile(fileId, savedPassword);
+          setDownloadingFile(null);
+          return;
+        } catch (decryptErr) {
+          console.error("Decryption with saved password failed:", decryptErr);
+          // Continue to fallback below
+        }
+      }
+
+      // If no saved password or decryption failed, try with a default password
+      try {
+        const defaultPassword = "test-password-123";
+        console.log("Trying with default password...");
+        await fileAPI.downloadFile(fileId, defaultPassword);
+        setDownloadingFile(null);
+        return;
+      } catch (defaultErr) {
+        console.error("Decryption with default password failed:", defaultErr);
+        // Continue to fallback
+      }
+
+      // Fallback: Just download the raw encrypted data
+      console.log("Falling back to raw encrypted download...");
+      const encryptedBlob = await fileAPI.getEncryptedFileData(fileId);
+
+      const url = URL.createObjectURL(encryptedBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `file_${fileId.slice(-6)}_encrypted.bin`;
+      document.body.appendChild(a);
+      a.click();
+
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+
+      alert(
+        "Downloaded encrypted file. Proper decryption failed - the file is encrypted but the password is unknown.",
+      );
+
+      setDownloadingFile(null);
+    } catch (err) {
+      console.error("Error downloading file:", err);
+      alert("Failed to download file: " + err.message);
+      setDownloadingFile(null);
     }
   };
 
@@ -165,6 +256,7 @@ function CollectionFileListPage() {
                   alignItems: "center",
                   justifyContent: "center",
                   marginBottom: "10px",
+                  position: "relative",
                 }}
               >
                 <svg
@@ -180,6 +272,36 @@ function CollectionFileListPage() {
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                   <polyline points="14 2 14 8 20 8"></polyline>
                 </svg>
+
+                {downloadingFile === file.id && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: "rgba(255, 255, 255, 0.8)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    <div className="loading-spinner">
+                      <div
+                        style={{
+                          border: "3px solid #f3f3f3",
+                          borderTop: "3px solid #4285F4",
+                          borderRadius: "50%",
+                          width: "24px",
+                          height: "24px",
+                          animation: "spin 1s linear infinite",
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <h3
@@ -208,30 +330,37 @@ function CollectionFileListPage() {
                 className="file-actions"
               >
                 <button
+                  onClick={() => handleDownloadFile(file.id)}
+                  disabled={downloadingFile === file.id}
                   style={{
                     flex: "1",
                     padding: "8px",
-                    background: "#4285F4",
+                    background:
+                      downloadingFile === file.id ? "#ccc" : "#4285F4",
                     color: "white",
                     border: "none",
                     borderRadius: "4px",
-                    cursor: "pointer",
+                    cursor:
+                      downloadingFile === file.id ? "not-allowed" : "pointer",
                     fontSize: "0.9rem",
                   }}
                 >
-                  Download
+                  {downloadingFile === file.id ? "Downloading..." : "Download"}
                 </button>
 
                 <button
                   onClick={() => handleDeleteFile(file.id)}
+                  disabled={downloadingFile === file.id}
                   style={{
                     flex: "1",
                     padding: "8px",
-                    background: "#f44336",
+                    background:
+                      downloadingFile === file.id ? "#ccc" : "#f44336",
                     color: "white",
                     border: "none",
                     borderRadius: "4px",
-                    cursor: "pointer",
+                    cursor:
+                      downloadingFile === file.id ? "not-allowed" : "pointer",
                     fontSize: "0.9rem",
                   }}
                 >
@@ -242,6 +371,17 @@ function CollectionFileListPage() {
           ))}
         </div>
       )}
+
+      <style jsx>{`
+        @keyframes spin {
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
     </div>
   );
 }

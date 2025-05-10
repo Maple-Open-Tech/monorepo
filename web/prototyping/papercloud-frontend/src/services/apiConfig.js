@@ -2,15 +2,10 @@
 import axios from "axios";
 import tokenManager from "./TokenManager";
 
-/**
- * Creates a configured axios instance for API calls
- * @param {string} baseURL - The base URL for the API
- * @returns {object} Configured axios instance
- */
 export const createApiInstance = (baseURL) => {
   const instance = axios.create({
     baseURL,
-    // Remove default content-type to let axios decide based on the data
+    // Don't set default Content-Type here
   });
 
   // Add request interceptor to include auth token and set appropriate content type

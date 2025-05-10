@@ -63,6 +63,7 @@ function FileUploadPage() {
   };
 
   // Handle form submission
+  // In your FileUploadPage.jsx
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -71,39 +72,32 @@ function FileUploadPage() {
       return;
     }
 
-    if (!sodium) {
-      setError("Encryption library not initialized");
-      return;
-    }
-
     try {
       setUploading(true);
       setError(null);
       setProgress(10);
 
-      // For demo purposes, we'll create a dummy master key
-      // In a real implementation, this would be derived from the user's password
-      // and used to decrypt the collection key
-      const dummyMasterKey = new Uint8Array(32).fill(1);
+      // Use a simple password for testing
+      const simplePassword = "test-password-123";
 
-      setProgress(30);
-
-      // Generate a collection key
-      // In a real implementation, you would decrypt this from collection.encrypted_collection_key
-      const collectionKey = sodium.randombytes_buf(32);
-
+      // Log the progress
       setProgress(50);
 
-      // Upload the file with encryption
+      // Upload with our simplified E2EE implementation
       const result = await fileAPI.uploadFile(
         file,
         collectionId,
-        collectionKey,
+        simplePassword,
       );
 
       setProgress(100);
 
-      // Redirect to the file list page for this collection
+      console.log("Upload complete, result:", result);
+
+      // Store the password in localStorage (not secure!) for testing
+      localStorage.setItem(`file_${result.id}_password`, simplePassword);
+
+      // Redirect to the file list
       setTimeout(() => {
         navigate(`/collections/${collectionId}/files`);
       }, 500);

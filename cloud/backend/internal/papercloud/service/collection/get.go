@@ -99,14 +99,14 @@ func (svc *getCollectionServiceImpl) Execute(sessCtx context.Context, collection
 	// STEP 5: Map domain model to response DTO
 	//
 	response := &CollectionResponseDTO{
-		ID:        collection.ID,
-		OwnerID:   collection.OwnerID,
-		Name:      collection.Name,
-		Path:      collection.Path,
-		Type:      collection.Type,
+		ID:                     collection.ID,
+		OwnerID:                collection.OwnerID,
+		Name:                   collection.Name,
+		Path:                   collection.Path,
+		Type:                   collection.Type,
 		EncryptedCollectionKey: collection.EncryptedCollectionKey,
-		CreatedAt: collection.CreatedAt,
-		UpdatedAt: collection.UpdatedAt,
+		CreatedAt:              collection.CreatedAt,
+		UpdatedAt:              collection.UpdatedAt,
 		Members: make([]struct {
 			RecipientID     string    `json:"recipient_id"`
 			RecipientEmail  string    `json:"recipient_email"`

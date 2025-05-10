@@ -24,15 +24,15 @@ type CreateCollectionRequestDTO struct {
 }
 
 type CollectionResponseDTO struct {
-	ID        string    `json:"id"`
-	OwnerID   string    `json:"owner_id"`
-	Name      string    `json:"name"`
-	Path      string    `json:"path"`
-	Type      string    `json:"type"`
+	ID                     string                      `json:"id"`
+	OwnerID                string                      `json:"owner_id"`
+	Name                   string                      `json:"name"`
+	Path                   string                      `json:"path"`
+	Type                   string                      `json:"type"`
 	EncryptedCollectionKey keys.EncryptedCollectionKey `json:"encrypted_collection_key,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Members   []struct {
+	CreatedAt              time.Time                   `json:"created_at"`
+	UpdatedAt              time.Time                   `json:"updated_at"`
+	Members                []struct {
 		RecipientID     string    `json:"recipient_id"`
 		RecipientEmail  string    `json:"recipient_email"`
 		PermissionLevel string    `json:"permission_level"`
@@ -135,14 +135,14 @@ func (svc *createCollectionServiceImpl) Execute(sessCtx context.Context, req *Cr
 	// STEP 5: Map domain model to response DTO
 	//
 	response := &CollectionResponseDTO{
-		ID:        collection.ID,
-		OwnerID:   collection.OwnerID,
-		Name:      collection.Name,
-		Path:      collection.Path,
-		Type:      collection.Type,
+		ID:                     collection.ID,
+		OwnerID:                collection.OwnerID,
+		Name:                   collection.Name,
+		Path:                   collection.Path,
+		Type:                   collection.Type,
 		EncryptedCollectionKey: collection.EncryptedCollectionKey,
-		CreatedAt: collection.CreatedAt,
-		UpdatedAt: collection.UpdatedAt,
+		CreatedAt:              collection.CreatedAt,
+		UpdatedAt:              collection.UpdatedAt,
 		Members: make([]struct {
 			RecipientID     string    `json:"recipient_id"`
 			RecipientEmail  string    `json:"recipient_email"`

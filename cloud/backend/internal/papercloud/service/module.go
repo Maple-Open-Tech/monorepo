@@ -21,6 +21,8 @@ func Module() fx.Option {
 			collection.NewCreateCollectionService,
 			collection.NewGetCollectionService,
 			collection.NewListUserCollectionsService,
+			collection.NewUpdateCollectionService,
+			collection.NewDeleteCollectionService,
 		),
 	)
 }

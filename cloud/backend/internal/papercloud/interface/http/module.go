@@ -29,6 +29,8 @@ func Module() fx.Option {
 			unifiedhttp.AsRoute(collection.NewCreateCollectionHTTPHandler),
 			unifiedhttp.AsRoute(collection.NewGetCollectionHTTPHandler),
 			unifiedhttp.AsRoute(collection.NewListUserCollectionsHTTPHandler),
+			unifiedhttp.AsRoute(collection.NewUpdateCollectionHTTPHandler),
+			unifiedhttp.AsRoute(collection.NewDeleteCollectionHTTPHandler),
 		),
 	)
 }

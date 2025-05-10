@@ -8,26 +8,26 @@ import (
 )
 
 // curl http://localhost:8000/papercloud/api/v1/version
-type GetIncomePropertyEvaluatorVersionHTTPHandler struct {
+type PaperCloudVersionHTTPHandler struct {
 	log *zap.Logger
 }
 
-func NewGetIncomePropertyEvaluatorVersionHTTPHandler(
+func NewPaperCloudVersionHTTPHandler(
 	log *zap.Logger,
-) *GetIncomePropertyEvaluatorVersionHTTPHandler {
-	return &GetIncomePropertyEvaluatorVersionHTTPHandler{log}
+) *PaperCloudVersionHTTPHandler {
+	return &PaperCloudVersionHTTPHandler{log}
 }
 
 type IncomePropertyEvaluatorVersionResponseIDO struct {
 	Version string `json:"version"`
 }
 
-func (h *GetIncomePropertyEvaluatorVersionHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *PaperCloudVersionHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	response := IncomePropertyEvaluatorVersionResponseIDO{Version: "v1.0.0"}
 	json.NewEncoder(w).Encode(response)
 }
 
-func (*GetIncomePropertyEvaluatorVersionHTTPHandler) Pattern() string {
+func (*PaperCloudVersionHTTPHandler) Pattern() string {
 	return "/papercloud/api/v1/version"
 }

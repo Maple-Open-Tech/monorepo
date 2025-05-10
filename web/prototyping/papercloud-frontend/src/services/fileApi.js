@@ -1,463 +1,260 @@
 // src/services/fileApi.js
 import { paperCloudApi } from "./apiConfig";
-import _sodium from "libsodium-wrappers";
-
-// Create a namespace for our crypto functions to keep them organized
-const cryptoUtils = {
-  // Generate a deterministic key from a password and salt
-  deriveKey: async (password, salt = "fixed-salt-for-testing") => {
-    await _sodium.ready;
-    const sodium = _sodium;
-
-    // Convert password to bytes
-    const passwordBytes =
-      typeof password === "string" ? sodium.from_string(password) : password;
-
-    // Use a simple key derivation for testing
-    // In production, you'd use sodium.crypto_pwhash with proper parameters
-    const context = typeof salt === "string" ? sodium.from_string(salt) : salt;
-    return sodium.crypto_generichash(32, passwordBytes, context);
-  },
-
-  // Encrypt data with a key
-  encrypt: async (data, key) => {
-    await _sodium.ready;
-    const sodium = _sodium;
-
-    // Generate nonce
-    const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-
-    // Encrypt
-    const ciphertext = sodium.crypto_secretbox_easy(data, nonce, key);
-
-    // Return both nonce and ciphertext
-    return {
-      nonce,
-      ciphertext,
-    };
-  },
-
-  // Decrypt data with a key
-  decrypt: async (ciphertext, nonce, key) => {
-    await _sodium.ready;
-    const sodium = _sodium;
-
-    // Decrypt
-    return sodium.crypto_secretbox_open_easy(ciphertext, nonce, key);
-  },
-
-  // Combine nonce and ciphertext for storage
-  combineForStorage: (nonce, ciphertext) => {
-    const combined = new Uint8Array(nonce.length + ciphertext.length);
-    combined.set(nonce, 0);
-    combined.set(ciphertext, nonce.length);
-    return combined;
-  },
-
-  // Split combined data back into nonce and ciphertext
-  splitFromStorage: async (combined) => {
-    await _sodium.ready;
-    const sodium = _sodium;
-
-    const nonceLength = sodium.crypto_secretbox_NONCEBYTES;
-    return {
-      nonce: combined.slice(0, nonceLength),
-      ciphertext: combined.slice(nonceLength),
-    };
-  },
-
-  // Convert to/from various formats
-  toBase64: async (bytes) => {
-    await _sodium.ready;
-    return _sodium.to_base64(bytes);
-  },
-
-  fromBase64: async (base64) => {
-    await _sodium.ready;
-    return _sodium.from_base64(base64);
-  },
-
-  // Object to Uint8Array
-  stringToBytes: async (str) => {
-    await _sodium.ready;
-    return _sodium.from_string(str);
-  },
-
-  // Uint8Array to string
-  bytesToString: async (bytes) => {
-    await _sodium.ready;
-    return _sodium.to_string(bytes);
-  },
-};
+import { cryptoUtils } from "../utils/crypto";
+import _sodium from "libsodium-wrappers"; // For sodium.randombytes_buf, ensure it's the initialized instance
 
 // File API functions
 export const fileAPI = {
-  // Get all files in a collection
   listFiles: async (collectionId) => {
-    try {
-      const response = await paperCloudApi.get(
-        `/collections/${collectionId}/files`,
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error listing files:", error);
-      throw error;
-    }
+    const response = await paperCloudApi.get(
+      `/collections/${collectionId}/files`,
+    );
+    return response.data;
   },
 
-  // Get a single file by ID
   getFile: async (fileId) => {
-    try {
-      const response = await paperCloudApi.get(`/files/${fileId}`);
-      // Log the raw response data from this specific API call
-      console.log(
-        `[fileAPI.getFile response for ${fileId}]:`,
-        JSON.stringify(response.data, null, 2),
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error getting file:", error);
-      throw error;
-    }
+    const response = await paperCloudApi.get(`/files/${fileId}`);
+    console.log(
+      `[fileAPI.getFile metadata for ${fileId}]:`,
+      JSON.stringify(response.data, null, 2),
+    );
+    return response.data; // This is FileResponseDTO
   },
 
-  // Store the encrypted file data to S3
-  storeEncryptedFileData: async (fileId, encryptedData) => {
-    try {
-      console.log(
-        `Storing encrypted data for file ${fileId} (${encryptedData.length} bytes)`,
-      );
-
-      // Create a blob from the encrypted data
-      const blob = new Blob([encryptedData]);
-
-      // Create a FormData object to send the file
-      const formData = new FormData();
-      formData.append("file", blob, "encrypted_file.bin");
-
-      // Send the encrypted data to the server
-      const response = await paperCloudApi.post(
-        `/files/${fileId}/data`,
-        formData,
-      );
-
-      console.log("File data upload response:", response.data);
-      return response.data;
-    } catch (error) {
-      console.error("Error storing encrypted file data:", error);
-      throw error;
-    }
+  storeEncryptedFileData: async (fileId, encryptedDataWithNonce) => {
+    const blob = new Blob([encryptedDataWithNonce], {
+      type: "application/octet-stream",
+    });
+    const formData = new FormData();
+    formData.append("file", blob, "encrypted_file.bin"); // Filename is illustrative
+    // fileId here is the server's metadata ID for the file
+    const response = await paperCloudApi.post(
+      `/files/${fileId}/data`,
+      formData,
+    );
+    return response.data;
   },
 
-  // Get encrypted file data from the server
-  getEncryptedFileData: async (fileId) => {
-    try {
-      console.log(`Downloading encrypted data for file ${fileId}`);
-
-      // Create a request with responseType blob to handle binary data
-      const response = await paperCloudApi.get(`/files/${fileId}/data`, {
-        responseType: "blob",
-      });
-
-      return response.data;
-    } catch (error) {
-      console.error("Error downloading file data:", error);
-      throw error;
-    }
+  getEncryptedFileData: async (fileId /* server metadata ID */) => {
+    const response = await paperCloudApi.get(`/files/${fileId}/data`, {
+      responseType: "blob",
+    });
+    return response.data; // This is a Blob
   },
 
-  // Delete a file
   deleteFile: async (fileId) => {
-    try {
-      const response = await paperCloudApi.delete(`/files/${fileId}`);
-      return response.data;
-    } catch (error) {
-      console.error("Error deleting file:", error);
-      throw error;
-    }
+    const response = await paperCloudApi.delete(`/files/${fileId}`);
+    return response.data;
   },
 
-  // Upload a file (encrypts the file and creates the file record)
-  uploadFile: async (file, collectionId, password) => {
-    try {
-      await _sodium.ready;
-      const sodium = _sodium;
+  uploadFile: async (
+    fileInstance,
+    collectionId,
+    decryptedCollectionKey,
+    onProgress,
+  ) => {
+    const sodium = await cryptoUtils.ensureSodium();
+    onProgress(5);
 
-      console.log("Starting simplified E2EE file upload...");
+    // 1. Generate File Key
+    const fileKey = await cryptoUtils.generateRandomBytes(
+      sodium.crypto_secretbox_KEYBYTES,
+    );
+    onProgress(10);
 
-      // Step 1: Log the password we're using
-      console.log("Using password:", password);
+    // 2. Encrypt File Key with (decrypted) Collection Key
+    const { nonce: efkNonce, ciphertext: efkCiphertext } =
+      await cryptoUtils.encryptWithKey(fileKey, decryptedCollectionKey);
+    onProgress(20);
 
-      // Step 2: Read the file as an ArrayBuffer
-      console.log("Reading file:", file.name, file.size, "bytes");
-      const fileContent = await file.arrayBuffer();
-      const fileContentUint8 = new Uint8Array(fileContent);
+    // 3. Read file content
+    const fileContentBytes = new Uint8Array(await fileInstance.arrayBuffer());
+    onProgress(30);
 
-      // Step 3: Create a file key to encrypt the content
-      console.log("Generating file encryption key...");
-      const fileKey = sodium.randombytes_buf(32);
+    // 4. Encrypt File Content with File Key
+    const { nonce: contentNonce, ciphertext: contentCiphertext } =
+      await cryptoUtils.encryptWithKey(fileContentBytes, fileKey);
+    const combinedEncryptedContent = cryptoUtils.combineNonceAndCiphertext(
+      contentNonce,
+      contentCiphertext,
+    );
+    onProgress(50);
 
-      // Step 4: Derive master key from password
-      console.log("Deriving master key from password...");
-      const masterKey = await cryptoUtils.deriveKey(password);
+    // 5. Prepare and Encrypt Metadata
+    const metadata = {
+      name: fileInstance.name,
+      type: fileInstance.type || "application/octet-stream",
+      original_size: fileInstance.size,
+      lastModified: fileInstance.lastModified,
+    };
+    const metadataString = JSON.stringify(metadata);
+    const metadataBytes = await cryptoUtils.stringToBytes(metadataString);
+    const { nonce: metaNonce, ciphertext: metaCiphertext } =
+      await cryptoUtils.encryptWithKey(metadataBytes, fileKey);
+    const combinedEncryptedMetadata = cryptoUtils.combineNonceAndCiphertext(
+      metaNonce,
+      metaCiphertext,
+    );
+    const base64EncryptedMetadata = await cryptoUtils.toBase64(
+      combinedEncryptedMetadata,
+    );
+    onProgress(60);
 
-      // Step 5: Encrypt the file key with the master key
-      console.log("Encrypting file key with master key...");
-      const { nonce: keyNonce, ciphertext: encryptedFileKeyCiphertext } =
-        await cryptoUtils.encrypt(fileKey, masterKey);
+    const clientSideFileId = await cryptoUtils.toBase64(
+      await cryptoUtils.generateRandomBytes(16),
+    );
+    const encryptedContentHashBytes = sodium.crypto_generichash(
+      32,
+      combinedEncryptedContent,
+    );
+    const encryptedContentHash = await cryptoUtils.toBase64(
+      encryptedContentHashBytes,
+    );
 
-      // Step 6: Encrypt the file content with the file key
-      console.log("Encrypting file content...");
-      const { nonce: contentNonce, ciphertext: encryptedContent } =
-        await cryptoUtils.encrypt(fileContentUint8, fileKey);
+    // 6. Prepare payload for creating file metadata record (POST /files)
+    // This corresponds to CreateFileRequestDTO in the backend service
+    const createFilePayload = {
+      collection_id: collectionId,
+      file_id: clientSideFileId, // This is the client-generated ID for the content
+      encrypted_size: combinedEncryptedContent.length,
+      encrypted_original_size: metadata.original_size.toString(),
+      encrypted_metadata: base64EncryptedMetadata, // base64(nonce || encrypted_metadata_json_bytes)
+      encrypted_file_key: {
+        // Corresponds to keys.EncryptedFileKey on backend
+        ciphertext: await cryptoUtils.toBase64(efkCiphertext),
+        nonce: await cryptoUtils.toBase64(efkNonce),
+      },
+      encryption_version: "1.0",
+      encrypted_hash: encryptedContentHash, // Hash of the combined (contentNonce + encryptedContentCiphertext)
+      // encrypted_thumbnail could be added here if generated and encrypted
+    };
+    onProgress(70);
 
-      // Step 7: Prepare metadata
-      console.log("Preparing and encrypting metadata...");
-      const metadata = {
-        name: file.name,
-        type: file.type,
-        lastModified: file.lastModified,
-        size: file.size,
-      };
+    // 7. API Call: Create file metadata record
+    const createResponse = await paperCloudApi.post(
+      "/files",
+      createFilePayload,
+    );
+    const createdFileRecord = createResponse.data; // This is FileResponseDTO from backend
+    onProgress(80);
 
-      // Step 8: Encrypt metadata
-      const metadataBytes = await cryptoUtils.stringToBytes(
-        JSON.stringify(metadata),
+    // 8. API Call: Upload encrypted file content (POST /files/{SERVER_METADATA_ID}/data)
+    // The ID from createdFileRecord is the MongoDB ObjectID of the metadata document.
+    await fileAPI.storeEncryptedFileData(
+      createdFileRecord.id,
+      combinedEncryptedContent,
+    );
+    onProgress(100);
+
+    return createdFileRecord;
+  },
+
+  downloadFile: async (fileId /* server metadata ID */, masterKey) => {
+    const sodium = await cryptoUtils.ensureSodium();
+    console.log(`E2EE Download: Starting for server file ID: ${fileId}`);
+
+    // 1. Get File Metadata (FileResponseDTO)
+    const fileRecord = await fileAPI.getFile(fileId);
+    if (!fileRecord) throw new Error("File metadata not found.");
+
+    // 2. Get Collection Data and Decrypt Collection Key
+    const collectionData = await collectionsAPI.getCollection(
+      fileRecord.collection_id,
+      masterKey,
+    );
+    if (!collectionData || !collectionData.decryptedCollectionKey) {
+      throw new Error(
+        `Could not retrieve or decrypt collection key for collection ${fileRecord.collection_id}. ${collectionData?.decryptionError || ""}`,
       );
-      const { nonce: metadataNonce, ciphertext: encryptedMetadata } =
-        await cryptoUtils.encrypt(metadataBytes, fileKey);
+    }
+    const decryptedCollectionKey = collectionData.decryptedCollectionKey;
 
-      // Step 9: Combine metadata nonce and ciphertext for storage
-      const combinedMetadata = cryptoUtils.combineForStorage(
-        metadataNonce,
-        encryptedMetadata,
-      );
-      const base64Metadata = await cryptoUtils.toBase64(combinedMetadata);
+    // 3. Decrypt File Key
+    // encrypted_file_key: { ciphertext: base64String, nonce: base64String }
+    const efkCiphertext = await cryptoUtils.fromBase64(
+      fileRecord.encrypted_file_key.ciphertext,
+    );
+    const efkNonce = await cryptoUtils.fromBase64(
+      fileRecord.encrypted_file_key.nonce,
+    );
+    const decryptedFileKey = await cryptoUtils.decryptWithKey(
+      efkCiphertext,
+      efkNonce,
+      decryptedCollectionKey,
+    );
+    console.log("E2EE Download: File key decrypted");
 
-      // Step 10: Create the file data structure
-      const fileData = {
-        collection_id: collectionId,
-        file_id: await cryptoUtils.toBase64(sodium.randombytes_buf(16)),
-        encrypted_size: encryptedContent.length + contentNonce.length,
-        encrypted_original_size: String(file.size),
-        encrypted_metadata: base64Metadata,
-        // Store file key encrypted with master key
-        encrypted_file_key: {
-          ciphertext: Array.from(encryptedFileKeyCiphertext),
-          nonce: Array.from(keyNonce),
-        },
-        encryption_version: "1.0",
-      };
+    // 4. Download Encrypted File Content (Blob of nonce || ciphertext)
+    const encryptedContentBlob = await fileAPI.getEncryptedFileData(
+      fileRecord.id,
+    );
+    const encryptedContentWithNonce = new Uint8Array(
+      await encryptedContentBlob.arrayBuffer(),
+    );
 
-      console.log("Prepared file data:", {
-        ...fileData,
-        encrypted_file_key: {
-          ciphertext_length: encryptedFileKeyCiphertext.length,
-          nonce_length: keyNonce.length,
-        },
-      });
+    // 5. Split Nonce and Ciphertext for File Content
+    const { nonce: contentNonce, ciphertext: contentCiphertext } =
+      await cryptoUtils.splitNonceAndCiphertext(encryptedContentWithNonce);
 
-      // Step 11: Create file metadata record in database
-      console.log("Creating file record in database...");
-      const response = await paperCloudApi.post("/files", fileData);
-      const createdFile = response.data;
-      console.log("File record created:", createdFile);
+    // 6. Decrypt File Content
+    const decryptedFileContent = await cryptoUtils.decryptWithKey(
+      contentCiphertext,
+      contentNonce,
+      decryptedFileKey,
+    );
+    console.log(
+      "E2EE Download: File content decrypted",
+      decryptedFileContent.length,
+      "bytes",
+    );
 
-      // Step 12: Combine content nonce and encrypted content for storage
-      console.log("Combining nonce and content for storage...");
-      const fileToUpload = cryptoUtils.combineForStorage(
-        contentNonce,
-        encryptedContent,
-      );
-
-      // Step 13: Upload the encrypted file content
+    // 7. Decrypt Metadata
+    let originalMetadata = {
+      name: `file_${fileId.slice(-6)}.dat`,
+      type: "application/octet-stream",
+    };
+    if (fileRecord.encrypted_metadata) {
       try {
-        console.log(
-          `Uploading encrypted file (${fileToUpload.length} bytes)...`,
+        const combinedEncMetadata = await cryptoUtils.fromBase64(
+          fileRecord.encrypted_metadata,
         );
-        await fileAPI.storeEncryptedFileData(createdFile.id, fileToUpload);
-        console.log(`File ${createdFile.id} uploaded successfully!`);
-
-        // Step 14: Save the password for this file (only for testing!)
-        localStorage.setItem(`file_${createdFile.id}_password`, password);
-        console.log(`Password saved for file ${createdFile.id}`);
-
-        return createdFile;
-      } catch (uploadError) {
-        console.error("Failed to upload file content:", uploadError);
-        await paperCloudApi.delete(`/files/${createdFile.id}`);
-        throw new Error(
-          `Failed to upload file content: ${uploadError.message}`,
+        const { nonce: metaNonce, ciphertext: metaCiphertext } =
+          await cryptoUtils.splitNonceAndCiphertext(combinedEncMetadata);
+        const decryptedMetaBytes = await cryptoUtils.decryptWithKey(
+          metaCiphertext,
+          metaNonce,
+          decryptedFileKey,
+        );
+        originalMetadata = JSON.parse(
+          await cryptoUtils.bytesToString(decryptedMetaBytes),
+        );
+        console.log("E2EE Download: Metadata decrypted", originalMetadata);
+      } catch (metaErr) {
+        console.warn(
+          "E2EE Download: Failed to decrypt metadata, using defaults.",
+          metaErr,
         );
       }
-    } catch (error) {
-      console.error("File upload error:", error);
-      throw new Error(`Failed to upload file: ${error.message}`);
     }
-  },
 
-  // Download a file (retrieves and decrypts file content)
-  downloadFile: async (fileId, password) => {
-    try {
-      console.log(`Starting E2EE download for file ${fileId}`);
-      console.log("Using password:", password);
+    // 8. Trigger browser download
+    const finalBlob = new Blob([decryptedFileContent], {
+      type: originalMetadata.type,
+    });
+    const url = URL.createObjectURL(finalBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = originalMetadata.name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      // Cleanup
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+    console.log("E2EE Download: Download triggered for", originalMetadata.name);
 
-      // Step 1: Get the file metadata
-      console.log("Retrieving file metadata...");
-      const file = await fileAPI.getFile(fileId); // getFile now logs its response
-      // console.log("File metadata retrieved for decryption:", JSON.stringify(file, null, 2)); // This log is now inside getFile
-
-      // Step 2: Check if we have the necessary encryption data
-      if (!file) {
-        throw new Error("File metadata could not be retrieved (null).");
-      }
-      if (!file.encrypted_file_key) {
-        console.error(
-          "file.encrypted_file_key is missing. Full file object from getFile:",
-          file,
-        );
-        throw new Error(
-          "File metadata is missing 'encrypted_file_key'. Check API response for GET /files/{file_id}.",
-        );
-      }
-      if (
-        typeof file.encrypted_file_key.ciphertext !== "string" ||
-        file.encrypted_file_key.ciphertext.length === 0
-      ) {
-        console.error(
-          "'encrypted_file_key.ciphertext' is not a non-empty string. Received:",
-          file.encrypted_file_key.ciphertext,
-          ". Full encrypted_file_key object:",
-          file.encrypted_file_key,
-        );
-        throw new Error(
-          "File metadata's 'encrypted_file_key.ciphertext' is missing, empty, or not a string.",
-        );
-      }
-      if (
-        typeof file.encrypted_file_key.nonce !== "string" ||
-        file.encrypted_file_key.nonce.length === 0
-      ) {
-        console.error(
-          "'encrypted_file_key.nonce' is not a non-empty string. Received:",
-          file.encrypted_file_key.nonce,
-          ". Full encrypted_file_key object:",
-          file.encrypted_file_key,
-        );
-        throw new Error(
-          "File metadata's 'encrypted_file_key.nonce' is missing, empty, or not a string.",
-        );
-      }
-
-      // Step 3: Derive the master key from the password
-      console.log("Deriving master key from password...");
-      const masterKey = await cryptoUtils.deriveKey(password);
-
-      // Step 4: Decrypt the file key using the master key
-      console.log(
-        "Decrypting file key (ciphertext and nonce should be base64 strings)...",
-      );
-      const encryptedFileKeyBytes = await cryptoUtils.fromBase64(
-        file.encrypted_file_key.ciphertext,
-      );
-      const keyNonceBytes = await cryptoUtils.fromBase64(
-        file.encrypted_file_key.nonce,
-      );
-
-      const fileKey = await cryptoUtils.decrypt(
-        encryptedFileKeyBytes,
-        keyNonceBytes,
-        masterKey,
-      );
-      console.log("File key decrypted successfully:", fileKey.length, "bytes");
-
-      // Step 5: Get the encrypted file data
-      console.log("Retrieving encrypted file data...");
-      const encryptedBlob = await fileAPI.getEncryptedFileData(fileId);
-      console.log(
-        "Encrypted file data retrieved:",
-        encryptedBlob.size,
-        "bytes",
-      );
-
-      const encryptedData = new Uint8Array(await encryptedBlob.arrayBuffer());
-
-      // Step 6: Split the nonce and ciphertext
-      console.log("Separating nonce and ciphertext from downloaded content...");
-      const { nonce: contentNonce, ciphertext } =
-        await cryptoUtils.splitFromStorage(encryptedData);
-
-      // Step 7: Decrypt the file content
-      console.log("Decrypting file content...");
-      const decryptedContent = await cryptoUtils.decrypt(
-        ciphertext,
-        contentNonce,
-        fileKey,
-      );
-      console.log("File content decrypted:", decryptedContent.length, "bytes");
-
-      // Step 8: Decrypt the metadata to get file name and type
-      console.log("Decrypting file metadata from file object...");
-      let metadata = {
-        name: `file_${fileId.slice(-6)}`, // Default name
-        type: "application/octet-stream", // Default type
-      };
-
-      if (file.encrypted_metadata) {
-        try {
-          const encryptedMetadataBytes = await cryptoUtils.fromBase64(
-            file.encrypted_metadata,
-          );
-          const { nonce: metadataNonce, ciphertext: metadataCiphertext } =
-            await cryptoUtils.splitFromStorage(encryptedMetadataBytes);
-
-          const decryptedMetadataBytes = await cryptoUtils.decrypt(
-            metadataCiphertext,
-            metadataNonce,
-            fileKey,
-          );
-
-          const metadataString = await cryptoUtils.bytesToString(
-            decryptedMetadataBytes,
-          );
-          metadata = JSON.parse(metadataString);
-          console.log("File metadata decrypted:", metadata);
-        } catch (metadataErr) {
-          console.warn(
-            "Failed to decrypt metadata, using defaults:",
-            metadataErr,
-          );
-        }
-      }
-
-      // Step 9: Create a download blob and trigger download
-      console.log("Creating download with type:", metadata.type);
-      const blob = new Blob([decryptedContent], {
-        type: metadata.type || "application/octet-stream",
-      });
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = metadata.name || `file_${fileId.slice(-6)}`; // Use decrypted name or default
-      document.body.appendChild(a);
-      a.click();
-
-      // Clean up
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 100);
-
-      console.log("Download complete!");
-      return {
-        success: true,
-        metadata,
-      };
-    } catch (error) {
-      console.error("File download error:", error);
-      throw new Error(`Failed to download file: ${error.message}`);
-    }
+    return { success: true, fileName: originalMetadata.name };
   },
 };
 

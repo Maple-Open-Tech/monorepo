@@ -1,126 +1,174 @@
 // web/prototyping/papercloud-frontend/src/contexts/AuthContext.jsx
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 import { useNavigate } from "react-router";
 import tokenManager from "../services/TokenManager";
+import { initSodium } from "../utils/crypto"; // Import initSodium from cryptoUtils
 
-// Create auth context
 const AuthContext = createContext(null);
 
-// Auth provider component
 export function AuthProvider({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    tokenManager.isLoggedIn(),
-  );
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [userEmail, setUserEmail] = useState(null);
+  const [masterKey, setMasterKey] = useState(null);
+  const [privateKey, setPrivateKey] = useState(null);
+  const [publicKey, setPublicKey] = useState(null);
+  const [salt, setSalt] = useState(null);
+  const [sodium, setSodiumInstance] = useState(null); // Renamed to avoid conflict with imported _sodium
+  const [authError, setAuthError] = useState(null); // For displaying errors from this context
+
   const navigate = useNavigate();
 
-  // Initialize the token manager when the component mounts
   useEffect(() => {
-    const initialize = async () => {
+    const initializeApp = async () => {
+      setIsLoading(true);
+      setAuthError(null);
       try {
-        // Initialize the token manager
-        await tokenManager.initialize();
+        const S = await initSodium(); // Initialize sodium through cryptoUtils
+        setSodiumInstance(S); // Store the fully initialized instance
+        console.log("Sodium instance set in AuthContext state");
 
-        // Update authentication state
-        setIsAuthenticated(tokenManager.isLoggedIn());
+        await tokenManager.initialize();
+        const loggedIn = tokenManager.isLoggedIn();
+        setIsAuthenticated(loggedIn);
+        if (loggedIn) {
+          setUserEmail(localStorage.getItem("userEmail"));
+          // Potentially load E2EE keys if they were securely persisted (advanced)
+          // For now, keys are only set on explicit login.
+        }
       } catch (error) {
-        console.error("Error initializing token manager:", error);
+        console.error("AuthContext: Error during app initialization:", error);
+        setAuthError("Initialization failed. Please refresh.");
       } finally {
         setIsLoading(false);
       }
     };
 
-    initialize();
+    initializeApp();
 
-    // Add listener for token events
-    const unsubscribe = tokenManager.addListener((event, success, error) => {
-      if (event === "refresh") {
-        if (!success) {
-          // Token refresh failed, update authentication state
-          setIsAuthenticated(false);
-
-          // Navigate to login page
-          navigate("/login", {
-            replace: true,
-            state: {
-              from: window.location.pathname,
-              error: "Your session has expired. Please log in again.",
-            },
-          });
-        } else {
-          // Token refresh succeeded, update authentication state
-          setIsAuthenticated(true);
+    const unsubscribe = tokenManager.addListener(
+      (event, success, listenerError) => {
+        if (event === "refresh") {
+          if (!success) {
+            setIsAuthenticated(false);
+            clearE2EEKeys();
+            navigate("/login", {
+              replace: true,
+              state: {
+                from: window.location.pathname,
+                error: `Your session has expired or refresh failed: ${listenerError?.message || "Unknown reason"}. Please log in again.`,
+              },
+            });
+          } else {
+            setIsAuthenticated(true);
+          }
         }
-      }
-    });
+      },
+    );
 
-    // Clean up when component unmounts
     return () => {
       unsubscribe();
       tokenManager.cleanup();
     };
+  }, [navigate]); // Removed sodium from deps as it's initialized within
+
+  const login = useCallback(
+    (
+      accessToken,
+      accessTokenExpiry,
+      refreshToken,
+      refreshTokenExpiry,
+      decryptedMasterKey,
+      decryptedPrivateKey,
+      userPublicKeyBytes, // Expecting Uint8Array
+      userSaltBytes, // Expecting Uint8Array
+      emailForLogin,
+    ) => {
+      try {
+        tokenManager.updateTokens(
+          accessToken,
+          accessTokenExpiry,
+          refreshToken,
+          refreshTokenExpiry,
+        );
+        setIsAuthenticated(true);
+        setUserEmail(emailForLogin);
+        localStorage.setItem("userEmail", emailForLogin);
+
+        setMasterKey(decryptedMasterKey);
+        setPrivateKey(decryptedPrivateKey);
+        setPublicKey(userPublicKeyBytes);
+        setSalt(userSaltBytes);
+
+        console.log(
+          "AuthContext: E2EE Keys and user email stored in memory/localStorage.",
+        );
+        setAuthError(null); // Clear any previous auth errors
+      } catch (error) {
+        console.error("Error in AuthContext login function:", error);
+        logout(); // Clear all state on login processing error
+        setAuthError(`Login processing failed: ${error.message}`);
+      }
+    },
+    [], // Removed logout from deps, use navigate from effect or pass if needed
+  );
+
+  const clearE2EEKeys = () => {
+    setMasterKey(null);
+    setPrivateKey(null);
+    setPublicKey(null);
+    setSalt(null);
+    console.log("AuthContext: E2EE Keys cleared from memory");
+  };
+
+  const logout = useCallback(() => {
+    tokenManager.clearTokens();
+    localStorage.removeItem("userEmail");
+    setIsAuthenticated(false);
+    setUserEmail(null);
+    clearE2EEKeys();
+    setAuthError(null); // Clear errors on logout
+    navigate("/login");
   }, [navigate]);
 
-  // Login function - to be called after successful login
-  const login = (
-    accessToken,
-    accessTokenExpiry,
-    refreshToken,
-    refreshTokenExpiry,
-  ) => {
-    try {
-      // Log what we're receiving from the backend
-      console.log("Login received data:", {
-        accessToken: accessToken ? "present" : "missing",
-        accessTokenExpiry,
-        refreshToken: refreshToken ? "present" : "missing",
-        refreshTokenExpiry,
-      });
-
-      // Safely update tokens with error handling
-      tokenManager.updateTokens(
-        accessToken,
-        accessTokenExpiry,
-        refreshToken,
-        refreshTokenExpiry,
-      );
-
-      // Update authentication state
-      setIsAuthenticated(true);
-    } catch (error) {
-      console.error("Error in login function:", error);
-      // Still set authenticated if we have the tokens, even if there was an error with expiry dates
-      if (accessToken && refreshToken) {
-        setIsAuthenticated(true);
-      }
-    }
-  };
-
-  // Logout function
-  const logout = () => {
-    tokenManager.clearTokens();
-    setIsAuthenticated(false);
-    navigate("/login");
-  };
-
-  // Get current access token
-  const getAccessToken = () => {
+  const getAccessToken = useCallback(() => {
     return tokenManager.getAccessToken();
-  };
+  }, []);
 
-  // Context value
   const value = {
     isAuthenticated,
     isLoading,
+    userEmail,
     login,
     logout,
     getAccessToken,
+    masterKey,
+    privateKey,
+    publicKey,
+    salt,
+    sodium, // Provide the initialized sodium instance
+    authError, // Provide error state
   };
+
+  // Display loading or error state from AuthContext itself if critical
+  if (isLoading) return <div>Loading application authentication...</div>;
+  if (authError && !isAuthenticated)
+    return (
+      <div>
+        Critical Error: {authError}{" "}
+        <button onClick={() => window.location.reload()}>Refresh</button>
+      </div>
+    );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-// Custom hook to use the auth context
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === null) {

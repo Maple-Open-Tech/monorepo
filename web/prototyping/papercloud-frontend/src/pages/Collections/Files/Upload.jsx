@@ -3,57 +3,64 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import { collectionsAPI } from "../../../services/collectionApi";
 import { fileAPI } from "../../../services/fileApi";
-import _sodium from "libsodium-wrappers";
+import { useAuth } from "../../../contexts/AuthContext"; // Import useAuth
 
 function FileUploadPage() {
   const { collectionId } = useParams();
   const navigate = useNavigate();
+  const { masterKey, sodium } = useAuth(); // Get masterKey and sodium from AuthContext
 
   const [collection, setCollection] = useState(null);
+  const [decryptedCollectionKey, setDecryptedCollectionKey] = useState(null);
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // For fetching collection
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
-  const [sodium, setSodium] = useState(null);
 
-  // Initialize sodium library
+  // Fetch collection details and decrypt its key
   useEffect(() => {
-    const initSodium = async () => {
-      try {
-        await _sodium.ready;
-        setSodium(_sodium);
-      } catch (err) {
-        console.error("Error initializing sodium:", err);
-        setError("Failed to initialize encryption library");
+    const fetchAndPrepareCollection = async () => {
+      if (!collectionId || !masterKey || !sodium) {
+        if (!masterKey)
+          setError(
+            "Master key not available. Please ensure you are logged in correctly.",
+          );
+        if (!sodium) setError("Encryption library not ready.");
+        setLoading(false);
+        return;
       }
-    };
-
-    initSodium();
-  }, []);
-
-  // Fetch collection details
-  useEffect(() => {
-    const fetchCollection = async () => {
       try {
         setLoading(true);
-        const collectionData = await collectionsAPI.getCollection(collectionId);
+        const collectionData = await collectionsAPI.getCollection(
+          collectionId,
+          masterKey,
+        );
         setCollection(collectionData);
+        if (collectionData && collectionData.decryptedCollectionKey) {
+          setDecryptedCollectionKey(collectionData.decryptedCollectionKey);
+          console.log("Collection key decrypted for upload page.");
+        } else if (collectionData && collectionData.decryptionError) {
+          setError(
+            `Failed to prepare collection for upload: ${collectionData.decryptionError}`,
+          );
+        } else if (!collectionData) {
+          setError("Collection not found.");
+        } else {
+          setError("Failed to decrypt collection key. Cannot upload files.");
+        }
       } catch (err) {
-        console.error("Error fetching collection:", err);
-        setError("Failed to load collection details");
+        console.error("Error fetching/preparing collection:", err);
+        setError("Failed to load collection details for upload.");
       } finally {
         setLoading(false);
       }
     };
 
-    if (collectionId) {
-      fetchCollection();
-    }
-  }, [collectionId]);
+    fetchAndPrepareCollection();
+  }, [collectionId, masterKey, sodium]);
 
-  // Handle file selection
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
@@ -62,7 +69,6 @@ function FileUploadPage() {
     }
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -70,7 +76,10 @@ function FileUploadPage() {
       setError("Please select a file to upload");
       return;
     }
-
+    if (!decryptedCollectionKey) {
+      setError("Collection key not available. Cannot encrypt file.");
+      return;
+    }
     if (!sodium) {
       setError("Encryption library not initialized");
       return;
@@ -81,26 +90,17 @@ function FileUploadPage() {
       setError(null);
       setProgress(10);
 
-      // Use a simple fixed password for testing
-      // In production, you would derive this from a user's master password
-      const simplePassword = "test-password-123";
-      console.log("Using password for upload:", simplePassword);
+      console.log("Starting file upload with decrypted collection key...");
 
-      setProgress(30);
-
-      // Upload the file with encryption
-      setProgress(50);
-      const result = await fileAPI.uploadFile(
+      // The fileAPI.uploadFile now expects the decryptedCollectionKey
+      await fileAPI.uploadFile(
         file,
         collectionId,
-        simplePassword,
+        decryptedCollectionKey, // Pass the decrypted collection key
+        (p) => setProgress(p), // Progress callback
       );
 
-      setProgress(100);
-
       console.log("Upload complete!");
-
-      // Redirect to the file list page for this collection
       setTimeout(() => {
         navigate(`/collections/${collectionId}/files`);
       }, 500);
@@ -109,12 +109,11 @@ function FileUploadPage() {
       setError(err.message || "Failed to upload file");
     } finally {
       setUploading(false);
+      setProgress(0); // Reset progress
     }
   };
 
-  if (loading) {
-    return <div>Loading collection details...</div>;
-  }
+  if (loading) return <div>Loading collection details...</div>;
 
   if (error && !uploading) {
     return (
@@ -127,14 +126,14 @@ function FileUploadPage() {
     );
   }
 
+  if (!collection) return <div>Collection not found or access denied.</div>;
+  if (!decryptedCollectionKey && !loading)
+    return <div>Error: Collection key could not be prepared for upload.</div>;
+
   return (
     <div>
       <h1>Upload File to {collection?.name || "Collection"}</h1>
-
-      {error && (
-        <div style={{ color: "red", marginBottom: "15px" }}>{error}</div>
-      )}
-
+      {/* ... rest of the form is similar, ensure disabled states use !decryptedCollectionKey ... */}
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: "20px" }}>
           <label
@@ -147,7 +146,7 @@ function FileUploadPage() {
             type="file"
             id="file"
             onChange={handleFileChange}
-            disabled={uploading}
+            disabled={uploading || !decryptedCollectionKey}
             style={{ display: "block", marginBottom: "10px" }}
           />
           {fileName && (
@@ -172,12 +171,13 @@ function FileUploadPage() {
                   width: `${progress}%`,
                   background: "#4CAF50",
                   borderRadius: "5px",
-                  transition: "width 0.3s",
+                  transition: "width 0.3s ease-in-out",
                 }}
               />
             </div>
             <div style={{ textAlign: "center", marginTop: "5px" }}>
-              {progress}% - Encrypting and uploading...
+              {progress}% -{" "}
+              {progress < 100 ? "Encrypting and uploading..." : "Finalizing..."}
             </div>
           </div>
         )}
@@ -185,14 +185,20 @@ function FileUploadPage() {
         <div style={{ display: "flex", gap: "10px" }}>
           <button
             type="submit"
-            disabled={!file || uploading || !sodium}
+            disabled={!file || uploading || !decryptedCollectionKey || !sodium}
             style={{
               padding: "8px 16px",
-              background: !file || uploading || !sodium ? "#cccccc" : "#4CAF50",
+              background:
+                !file || uploading || !decryptedCollectionKey || !sodium
+                  ? "#cccccc"
+                  : "#4CAF50",
               color: "white",
               border: "none",
               borderRadius: "4px",
-              cursor: !file || uploading || !sodium ? "not-allowed" : "pointer",
+              cursor:
+                !file || uploading || !decryptedCollectionKey || !sodium
+                  ? "not-allowed"
+                  : "pointer",
             }}
           >
             {uploading ? "Uploading..." : "Upload File"}
@@ -215,11 +221,10 @@ function FileUploadPage() {
           </button>
         </div>
       </form>
-
       <div style={{ marginTop: "20px", fontSize: "0.8rem", color: "#666" }}>
         <p>
-          Note: Files are encrypted before uploading. Only users with access to
-          this collection will be able to view and download the file.
+          Files are encrypted end-to-end. Only users with access to this
+          collection and the necessary keys can decrypt and view the files.
         </p>
       </div>
     </div>

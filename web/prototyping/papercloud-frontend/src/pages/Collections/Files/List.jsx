@@ -3,128 +3,110 @@ import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router";
 import { collectionsAPI } from "../../../services/collectionApi";
 import { fileAPI } from "../../../services/fileApi";
+import { useAuth } from "../../../contexts/AuthContext"; // Import useAuth
 
 function CollectionFileListPage() {
   const { collectionId } = useParams();
   const navigate = useNavigate();
+  const { masterKey, sodium, isAuthenticated } = useAuth(); // Get masterKey and sodium
 
   const [collection, setCollection] = useState(null);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [downloadingFile, setDownloadingFile] = useState(null);
+  const [downloadingFile, setDownloadingFile] = useState(null); // Stores ID of file being downloaded
 
   useEffect(() => {
+    if (!isAuthenticated || !masterKey || !sodium) {
+      setError("Authentication or encryption context not ready.");
+      setLoading(false);
+      return;
+    }
     const fetchCollectionAndFiles = async () => {
       try {
-        // Fetch the collection details
-        const collectionData = await collectionsAPI.getCollection(collectionId);
+        setLoading(true);
+        // Fetch collection details (this will also decrypt collectionKey if masterKey is passed)
+        const collectionData = await collectionsAPI.getCollection(
+          collectionId,
+          masterKey,
+        );
         setCollection(collectionData);
+
+        if (collectionData && collectionData.decryptionError) {
+          setError(`Error with collection: ${collectionData.decryptionError}`);
+          setLoading(false);
+          return;
+        }
+        if (!collectionData) {
+          setError("Collection not found.");
+          setLoading(false);
+          return;
+        }
 
         // Fetch files in the collection
         const filesData = await collectionsAPI.listFiles(collectionId);
         setFiles(filesData.files || []);
       } catch (err) {
         console.error("Error fetching collection data:", err);
-        setError("Failed to load collection data");
+        setError("Failed to load collection data. " + err.message);
       } finally {
         setLoading(false);
       }
     };
 
     fetchCollectionAndFiles();
-  }, [collectionId]);
+  }, [collectionId, masterKey, sodium, isAuthenticated]);
 
   const handleDeleteFile = async (fileId) => {
-    if (!confirm("Are you sure you want to delete this file?")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this file? This action cannot be undone.",
+      )
+    ) {
       return;
     }
-
     try {
       await fileAPI.deleteFile(fileId);
-      // Refresh the file list
+      // Refresh file list
       const filesData = await collectionsAPI.listFiles(collectionId);
       setFiles(filesData.files || []);
     } catch (err) {
       console.error("Error deleting file:", err);
-      alert("Failed to delete file");
+      alert("Failed to delete file: " + err.message);
     }
   };
 
   const handleDownloadFile = async (fileId) => {
+    if (!masterKey) {
+      alert("Cannot download: Master key is not available.");
+      return;
+    }
+    setDownloadingFile(fileId);
     try {
-      setDownloadingFile(fileId);
+      console.log(`Attempting to download and decrypt file: ${fileId}`);
+      // The fileAPI.downloadFile now handles all E2EE decryption steps
+      const downloadResult = await fileAPI.downloadFile(fileId, masterKey);
 
-      // Try with the saved password first
-      const savedPassword = localStorage.getItem(`file_${fileId}_password`);
-
-      if (savedPassword) {
-        console.log(`Found saved password for file ${fileId}:`, savedPassword);
-        try {
-          await fileAPI.downloadFile(fileId, savedPassword);
-          setDownloadingFile(null);
-          return;
-        } catch (savedErr) {
-          console.error("Failed to decrypt with saved password:", savedErr);
-          // Continue to next attempt
-        }
+      if (downloadResult.success) {
+        alert(`File "${downloadResult.fileName}" downloaded successfully.`);
       } else {
-        console.log("No saved password found for file", fileId);
+        // This case might not be reached if downloadFile throws on failure
+        alert(
+          "File download completed, but there might have been an issue during decryption or saving.",
+        );
       }
-
-      // Try with the default test password
-      console.log("Trying with default test password...");
-      try {
-        const defaultPassword = "test-password-123";
-        await fileAPI.downloadFile(fileId, defaultPassword);
-        setDownloadingFile(null);
-        return;
-      } catch (defaultErr) {
-        console.error("Failed to decrypt with default password:", defaultErr);
-        // Continue to fallback
-      }
-
-      // Fallback: download raw encrypted file
-      console.log(
-        "All decryption attempts failed, downloading raw encrypted file",
-      );
-      const encryptedBlob = await fileAPI.getEncryptedFileData(fileId);
-
-      const url = URL.createObjectURL(encryptedBlob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `file_${fileId.slice(-6)}_encrypted.bin`;
-      document.body.appendChild(a);
-      a.click();
-
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 100);
-
-      alert(
-        "Downloaded encrypted file. Proper decryption failed - the file is encrypted but the password is unknown.",
-      );
-
-      setDownloadingFile(null);
     } catch (err) {
       console.error("Error downloading file:", err);
-      alert("Failed to download file: " + err.message);
+      alert(`Failed to download file: ${err.message}`);
+    } finally {
       setDownloadingFile(null);
     }
   };
 
-  if (loading) {
-    return <div>Loading collection files...</div>;
-  }
-
-  if (error) {
-    return <div>Error: {error}</div>;
-  }
-
-  if (!collection) {
-    return <div>Collection not found</div>;
-  }
+  if (loading) return <div>Loading collection files...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!collection && !loading)
+    return <div>Collection not found or access denied.</div>;
 
   return (
     <div>
@@ -136,18 +118,22 @@ function CollectionFileListPage() {
           marginBottom: "20px",
         }}
       >
-        <h1>{collection.name} Files</h1>
-
+        <h1>{collection?.name || "Collection"} Files</h1>
         <div>
           <button
             onClick={() => navigate(`/collections/${collectionId}/upload`)}
+            disabled={!collection || collection.decryptionError} // Disable if collection key couldn't be decrypted
             style={{
               padding: "10px 15px",
-              background: "#4CAF50",
+              background:
+                !collection || collection.decryptionError ? "#ccc" : "#4CAF50",
               color: "white",
               border: "none",
               borderRadius: "4px",
-              cursor: "pointer",
+              cursor:
+                !collection || collection.decryptionError
+                  ? "not-allowed"
+                  : "pointer",
               display: "flex",
               alignItems: "center",
               gap: "5px",
@@ -187,13 +173,18 @@ function CollectionFileListPage() {
           </p>
           <button
             onClick={() => navigate(`/collections/${collectionId}/upload`)}
+            disabled={!collection || collection.decryptionError}
             style={{
               padding: "10px 15px",
-              background: "#4CAF50",
+              background:
+                !collection || collection.decryptionError ? "#ccc" : "#4CAF50",
               color: "white",
               border: "none",
               borderRadius: "4px",
-              cursor: "pointer",
+              cursor:
+                !collection || collection.decryptionError
+                  ? "not-allowed"
+                  : "pointer",
             }}
           >
             Upload Your First File
@@ -210,7 +201,7 @@ function CollectionFileListPage() {
         >
           {files.map((file) => (
             <div
-              key={file.id}
+              key={file.id} // Assuming file object from API has `id`
               style={{
                 border: "1px solid #ddd",
                 borderRadius: "8px",
@@ -220,6 +211,7 @@ function CollectionFileListPage() {
               }}
               className="file-card"
             >
+              {/* ... (file card rendering, ensure to use file.id for keys and actions) ... */}
               <div
                 style={{
                   height: "120px",
@@ -245,7 +237,6 @@ function CollectionFileListPage() {
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                   <polyline points="14 2 14 8 20 8"></polyline>
                 </svg>
-
                 {downloadingFile === file.id && (
                   <div
                     style={{
@@ -276,7 +267,6 @@ function CollectionFileListPage() {
                   </div>
                 )}
               </div>
-
               <h3
                 style={{
                   margin: "0 0 5px 0",
@@ -284,10 +274,10 @@ function CollectionFileListPage() {
                   wordBreak: "break-word",
                 }}
               >
-                {file.encrypted_metadata ? "Encrypted File" : "File"} #
-                {file.id.slice(-6)}
+                {/* We can't display original name until metadata is decrypted during download */}
+                File ID: ...
+                {file.file_id ? file.file_id.slice(-10) : file.id.slice(-6)}
               </h3>
-
               <p
                 style={{
                   margin: "0 0 10px 0",
@@ -295,32 +285,34 @@ function CollectionFileListPage() {
                   fontSize: "0.9rem",
                 }}
               >
-                Size: {(file.encrypted_size / 1024).toFixed(1)} KB
+                Size: {(file.encrypted_size / 1024).toFixed(1)} KB (encrypted)
               </p>
-
               <div
                 style={{ display: "flex", gap: "10px" }}
                 className="file-actions"
               >
                 <button
                   onClick={() => handleDownloadFile(file.id)}
-                  disabled={downloadingFile === file.id}
+                  disabled={downloadingFile === file.id || !masterKey}
                   style={{
                     flex: "1",
                     padding: "8px",
                     background:
-                      downloadingFile === file.id ? "#ccc" : "#4285F4",
+                      downloadingFile === file.id || !masterKey
+                        ? "#ccc"
+                        : "#4285F4",
                     color: "white",
                     border: "none",
                     borderRadius: "4px",
                     cursor:
-                      downloadingFile === file.id ? "not-allowed" : "pointer",
+                      downloadingFile === file.id || !masterKey
+                        ? "not-allowed"
+                        : "pointer",
                     fontSize: "0.9rem",
                   }}
                 >
                   {downloadingFile === file.id ? "Downloading..." : "Download"}
                 </button>
-
                 <button
                   onClick={() => handleDeleteFile(file.id)}
                   disabled={downloadingFile === file.id}
@@ -344,8 +336,7 @@ function CollectionFileListPage() {
           ))}
         </div>
       )}
-
-      <style jsx>{`
+      <style jsx global>{`
         @keyframes spin {
           0% {
             transform: rotate(0deg);

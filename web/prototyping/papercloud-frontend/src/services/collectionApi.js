@@ -1,44 +1,6 @@
 // src/services/collectionApi.js
-import axios from "axios";
-import tokenManager from "./TokenManager";
+import { paperCloudApi } from "./apiConfig";
 import _sodium from "libsodium-wrappers";
-
-// Create an axios instance that uses the same base URL as your paperCloudApi
-const collectionApi = axios.create({
-  baseURL: "/papercloud/api/v1", // Note this matches your existing paperCloudApi
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-// Add request interceptor for auth token
-collectionApi.interceptors.request.use(
-  (config) => {
-    const token = tokenManager.getAccessToken();
-    if (token) {
-      config.headers["Authorization"] = `JWT ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  },
-);
-
-// Add response interceptor for 401 errors
-collectionApi.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  async (error) => {
-    if (error.response && error.response.status === 401) {
-      console.error("Unauthorized API call - redirecting to login", error);
-      tokenManager.clearTokens();
-      tokenManager.redirectToLogin();
-    }
-    return Promise.reject(error);
-  },
-);
 
 // Helper function to encrypt collection data
 const encryptCollectionData = async (name, path, masterKey) => {
@@ -79,7 +41,7 @@ export const collectionsAPI = {
   // Get all collections for the current user
   listCollections: async (masterKey = null) => {
     // This calls the GET /papercloud/api/v1/collections endpoint
-    const response = await collectionApi.get("/collections");
+    const response = await paperCloudApi.get("/collections");
 
     // If master key is provided, decrypt the collections
     if (masterKey && response.data && response.data.collections) {
@@ -92,7 +54,7 @@ export const collectionsAPI = {
 
   // Get a single collection by ID
   getCollection: async (collectionId, masterKey = null) => {
-    const response = await collectionApi.get(`/collections/${collectionId}`);
+    const response = await paperCloudApi.get(`/collections/${collectionId}`);
 
     // If master key is provided, decrypt the collection
     if (masterKey) {
@@ -108,7 +70,7 @@ export const collectionsAPI = {
     const encryptedData = await encryptCollectionData(name, path, masterKey);
 
     // Send the encrypted data to the server
-    const response = await collectionApi.post("/collections", encryptedData);
+    const response = await paperCloudApi.post("/collections", encryptedData);
     return response.data;
   },
 
@@ -124,7 +86,7 @@ export const collectionsAPI = {
     encryptedData.id = collectionId;
 
     // Send the encrypted data to the server
-    const response = await collectionApi.put(
+    const response = await paperCloudApi.put(
       `/collections/${collectionId}`,
       encryptedData,
     );
@@ -133,14 +95,14 @@ export const collectionsAPI = {
 
   // Delete a collection
   deleteCollection: async (collectionId) => {
-    const response = await collectionApi.delete(`/collections/${collectionId}`);
+    const response = await paperCloudApi.delete(`/collections/${collectionId}`);
     return response.data;
   },
 
   // List files in a collection
   listFiles: async (collectionId) => {
     // Note: Based on your backend implementation, this endpoint might be different
-    const response = await collectionApi.get(
+    const response = await paperCloudApi.get(
       `/collections/${collectionId}/files`,
     );
     return response.data;

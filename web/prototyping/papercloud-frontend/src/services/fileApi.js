@@ -1,6 +1,6 @@
 // src/services/fileApi.js
 import { paperCloudApi } from "./apiConfig";
-import { cryptoUtils } from "../utils/crypto";
+import { cryptoUtils, initSodium } from "../utils/crypto"; // Import initSodium
 import _sodium from "libsodium-wrappers-sumo";
 
 // File API functions
@@ -53,7 +53,7 @@ export const fileAPI = {
     decryptedCollectionKey,
     onProgress,
   ) => {
-    const sodium = await cryptoUtils.ensureSodium();
+    const sodium = await initSodium(); // Use initSodium
     onProgress(5);
 
     // 1. Generate File Key
@@ -150,7 +150,7 @@ export const fileAPI = {
   },
 
   downloadFile: async (fileId /* server metadata ID */, masterKey) => {
-    const sodium = await cryptoUtils.ensureSodium();
+    const sodium = await initSodium(); // Use initSodium
     console.log(`E2EE Download: Starting for server file ID: ${fileId}`);
 
     // 1. Get File Metadata (FileResponseDTO)

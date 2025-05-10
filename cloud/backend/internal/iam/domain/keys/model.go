@@ -119,6 +119,48 @@ type EncryptedFileKey struct {
 	Nonce      []byte `json:"nonce" bson:"nonce"`
 }
 
+// UnmarshalJSON custom unmarshaller for EncryptedFileKey to handle URL-safe base64 strings.
+func (efk *EncryptedFileKey) UnmarshalJSON(data []byte) error {
+	// Temporary struct to unmarshal into string fields
+	type Alias struct {
+		Ciphertext string `json:"ciphertext"`
+		Nonce      string `json:"nonce"`
+	}
+	var alias Alias
+
+	if err := json.Unmarshal(data, &alias); err != nil {
+		return fmt.Errorf("failed to unmarshal EncryptedFileKey into alias: %w", err)
+	}
+
+	// Decode Ciphertext from URL-safe base64
+	if alias.Ciphertext != "" {
+		ciphertextBytes, err := base64.RawURLEncoding.DecodeString(alias.Ciphertext)
+		if err != nil {
+			// Fallback attempt for standard encoding, though URL-safe is expected from client
+			ciphertextBytes, err = base64.StdEncoding.DecodeString(alias.Ciphertext)
+			if err != nil {
+				return fmt.Errorf("failed to decode EncryptedFileKey.Ciphertext (tried RawURL and Std): %w", err)
+			}
+		}
+		efk.Ciphertext = ciphertextBytes
+	}
+
+	// Decode Nonce from URL-safe base64
+	if alias.Nonce != "" {
+		nonceBytes, err := base64.RawURLEncoding.DecodeString(alias.Nonce)
+		if err != nil {
+			// Fallback attempt for standard encoding
+			nonceBytes, err = base64.StdEncoding.DecodeString(alias.Nonce)
+			if err != nil {
+				return fmt.Errorf("failed to decode EncryptedFileKey.Nonce (tried RawURL and Std): %w", err)
+			}
+		}
+		efk.Nonce = nonceBytes
+	}
+
+	return nil
+}
+
 // MasterKeyEncryptedWithRecoveryKey allows account recovery
 type MasterKeyEncryptedWithRecoveryKey struct {
 	Ciphertext []byte `json:"ciphertext" bson:"ciphertext"`
